@@ -1,0 +1,12 @@
+crewai
+langgraph
+langchain-groq
+langchain-core
+langchain-community
+anthropic
+pydantic
+python-dotenv
+rich
+pytest
+flask
+litellm
