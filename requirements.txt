@@ -10,3 +10,4 @@ rich
 pytest
 flask
 litellm
+gunicorn

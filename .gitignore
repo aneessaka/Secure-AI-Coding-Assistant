@@ -1,7 +1,14 @@
 ﻿.env
 .venv/
+venv_test/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.DS_Store
+*.log
 output/*.json
 output/*.md
-.pytest_cache/
+*.pdf
+.claude/
