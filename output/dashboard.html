@@ -768,86 +768,72 @@
             isRunning = true;
             const btn = document.getElementById('runBtn');
             btn.disabled = true;
-
             clearLog();
             findings.length = 0;
-            document.getElementById('findingsList').innerHTML = '<p style="color: #666;">[findings will appear here]</p>';
+            document.getElementById('findingsList').innerHTML = '<p style="color: #666;">Calling AI pipeline...</p>';
             document.getElementById('findingsCount').textContent = '0 findings';
-
+            const request = document.getElementById('userRequest').value || 'Build a secure login function';
+            const langBtn = document.querySelector('.lang-btn.active');
+            const language = langBtn ? langBtn.textContent.toLowerCase() : 'python';
             log('Pipeline initialized', 'success');
-
-            const timeline = [
-                { t: 0, action: () => {
-                    log('Building secure code...');
-                    updateNodeStatus('nodeBuilder', 'running');
-                    updateStatusBadge('builderStatus', 'RUNNING');
-                }},
-                { t: 1500, action: () => {
-                    updateNodeStatus('nodeBuilder', 'complete');
-                    updateStatusBadge('builderStatus', 'COMPLETE');
-                    log('Builder complete', 'success');
-                }},
-                { t: 2000, action: () => {
-                    updateNodeStatus('nodeHacker', 'running');
-                    updateStatusBadge('hackerStatus', 'RUNNING');
-                }},
-                { t: 2500, action: () => addFinding('CRITICAL', 'CWE-798', 'Hardcoded secrets') },
-                { t: 3000, action: () => addFinding('HIGH', 'CWE-613', 'Weak encryption') },
-                { t: 3500, action: () => {
-                    updateNodeStatus('nodeHacker', 'complete');
-                    updateStatusBadge('hackerStatus', 'COMPLETE');
-                    log('Hacker report ready', 'warning');
-                }},
-                { t: 4000, action: () => {
-                    updateNodeStatus('nodeAuditor', 'running');
-                    updateStatusBadge('auditorStatus', 'RUNNING');
-                }},
-                { t: 5000, action: () => {
-                    updateNodeStatus('nodeAuditor', 'complete');
-                    updateStatusBadge('auditorStatus', 'COMPLETE');
-                    log('Auditor: ESCALATED - Fixes needed', 'warning');
-                }},
-                { t: 5500, action: () => {
-                    updateNodeStatus('nodeBuilder', 'running');
-                    updateStatusBadge('builderStatus', 'RUNNING');
-                }},
-                { t: 7000, action: () => {
-                    updateNodeStatus('nodeBuilder', 'complete');
-                    updateStatusBadge('builderStatus', 'COMPLETE');
-                    log('Fixes applied', 'success');
-                }},
-                { t: 7500, action: () => {
-                    updateNodeStatus('nodeHacker', 'running');
-                    updateStatusBadge('hackerStatus', 'RUNNING');
-                }},
-                { t: 8500, action: () => {
-                    findings.length = 0;
-                    document.getElementById('findingsList').innerHTML = '<p style="color: var(--green);">No issues found!</p>';
-                    updateNodeStatus('nodeHacker', 'complete');
-                    updateStatusBadge('hackerStatus', 'COMPLETE');
-                    log('All checks passed', 'success');
-                }},
-                { t: 9000, action: () => {
-                    updateNodeStatus('nodeAuditor', 'running');
-                    updateStatusBadge('auditorStatus', 'RUNNING');
-                }},
-                { t: 10000, action: () => {
-                    updateNodeStatus('nodeAuditor', 'complete');
-                    updateStatusBadge('auditorStatus', 'COMPLETE');
-                    log('Auditor: APPROVED - Production ready', 'success');
-                }},
-                { t: 10500, action: () => {
-                    updateNodeStatus('nodeResult', 'complete');
-                    showResults();
-                }},
-            ];
-
-            for (const step of timeline) {
-                await new Promise(r => setTimeout(r, step.t));
-                step.action();
+            log('Request: ' + request + ' [' + language + ']');
+            updateNodeStatus('nodeBuilder', 'running');
+            updateStatusBadge('builderStatus', 'RUNNING');
+            log('Builder agent writing secure code...');
+            let result;
+            try {
+                const response = await fetch('https://secure-ai-coding-assistant.onrender.com/api/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ request: request, language: language })
+                });
+                result = await response.json();
+                if (result.status === 'error') throw new Error(result.message);
+            } catch (err) {
+                log('Error: ' + err.message, 'error');
+                updateNodeStatus('nodeBuilder', 'idle');
+                updateStatusBadge('builderStatus', 'ERROR');
+                isRunning = false;
+                btn.disabled = false;
+                return;
             }
-
+            updateNodeStatus('nodeBuilder', 'complete');
+            updateStatusBadge('builderStatus', 'COMPLETE');
+            log('Builder complete', 'success');
+            updateNodeStatus('nodeHacker', 'running');
+            updateStatusBadge('hackerStatus', 'RUNNING');
+            log('Hacker agent scanning for vulnerabilities...', 'warning');
+            findings.length = 0;
+            document.getElementById('findingsList').innerHTML = '';
+            var reportLines = (result.hacker_report || '').split('\n');
+            for (var i = 0; i < reportLines.length; i++) {
+                var line = reportLines[i];
+                var cweMatch = line.match(/CWE-(\d+)/i);
+                var cwe = cweMatch ? 'CWE-' + cweMatch[1] : 'CWE-000';
+                if (line.match(/CRITICAL/i)) addFinding('CRITICAL', cwe, line.replace(/.*CRITICAL[^:]*:/i,'').trim());
+                else if (line.match(/\bHIGH\b/i)) addFinding('HIGH', cwe, line.replace(/.*HIGH[^:]*:/i,'').trim());
+                else if (line.match(/MEDIUM/i)) addFinding('MEDIUM', cwe, line.replace(/.*MEDIUM[^:]*:/i,'').trim());
+                else if (line.match(/\bLOW\b/i)) addFinding('LOW', cwe, line.replace(/.*LOW[^:]*:/i,'').trim());
+            }
+            if (findings.length === 0) {
+                document.getElementById('findingsList').innerHTML = '<p style="color:var(--green)">No issues found!</p>';
+            }
+            updateNodeStatus('nodeHacker', 'complete');
+            updateStatusBadge('hackerStatus', 'COMPLETE');
+            log('Hacker found ' + findings.length + ' issue(s)', findings.length > 0 ? 'warning' : 'success');
+            updateNodeStatus('nodeAuditor', 'running');
+            updateStatusBadge('auditorStatus', 'RUNNING');
+            log('Auditor reviewing findings...');
+            await new Promise(function(r) { setTimeout(r, 800); });
+            var verdict = result.final_verdict || 'ESCALATED';
+            updateNodeStatus('nodeAuditor', 'complete');
+            updateStatusBadge('auditorStatus', 'COMPLETE');
+            log('Auditor: ' + verdict, verdict === 'APPROVED' ? 'success' : 'warning');
+            updateNodeStatus('nodeResult', 'complete');
+            showResults(result.builder_output, verdict);
             isRunning = false;
+            btn.disabled = false;
+        }
             btn.disabled = false;
         }
 
