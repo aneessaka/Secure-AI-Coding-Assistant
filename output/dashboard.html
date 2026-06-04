@@ -1,659 +1,875 @@
-﻿<!DOCTYPE html>
+﻿cat > /mnt/user-data/outputs/dashboard.html << 'HTMLEOF'
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Secure AI Coding Assistant</title>
+<title>Secure AI Coding Assistant — Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<!-- Monaco Editor -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#080b14;
-  --bg2:#0d1120;
-  --bg3:#111827;
-  --card:#0f1629;
-  --border:#1e2d4a;
-  --green:#00e87a;
-  --green2:#00b85e;
-  --red:#ff4060;
-  --amber:#ffb020;
-  --blue:#3b82f6;
-  --cyan:#06b6d4;
-  --text:#e2e8f0;
-  --muted:#64748b;
-  --font:'Space Grotesk',sans-serif;
-  --mono:'JetBrains Mono',monospace;
+  --bg:#07090f;--bg2:#0c1018;--bg3:#111827;--card:#0e1422;
+  --border:#1a2740;--border2:#243550;
+  --green:#00e87a;--green2:#00b85e;--green3:rgba(0,232,122,0.08);
+  --red:#ff4060;--red2:rgba(255,64,96,0.08);
+  --amber:#ffb020;--amber2:rgba(255,176,32,0.08);
+  --blue:#3b82f6;--cyan:#06b6d4;--purple:#a855f7;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --font:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
+  --radius:12px;--radius2:8px;
 }
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(0,232,122,0.07),transparent),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(59,130,246,0.05),transparent);pointer-events:none;z-index:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 60% 40% at 20% 0%,rgba(0,232,122,0.05),transparent),
+             radial-gradient(ellipse 50% 40% at 80% 100%,rgba(59,130,246,0.04),transparent);
+  pointer-events:none;z-index:0}
 
-/* Layout */
-.wrap{max-width:1300px;margin:0 auto;padding:24px;position:relative;z-index:1}
-.grid-main{display:grid;grid-template-columns:380px 1fr;gap:20px;margin-top:20px}
-.grid-agents{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
-.grid-bottom{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+/* ── TOP BAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:52px;background:var(--card);
+  border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:10}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--green),var(--cyan));
+  border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.logo-text{font-size:15px;font-weight:700;letter-spacing:-0.3px}
+.logo-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;
+  background:rgba(0,232,122,0.12);border:1px solid rgba(0,232,122,0.2);color:var(--green);margin-left:4px}
+.topbar-center{display:flex;align-items:center;gap:8px}
+.tab{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;
+  color:var(--text3);border:none;background:transparent;transition:all 0.2s;font-family:var(--font)}
+.tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+.tab.active{color:var(--text);background:rgba(255,255,255,0.07)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.api-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;
+  background:var(--green3);border:1px solid rgba(0,232,122,0.15);
+  border-radius:20px;font-size:12px;font-weight:500;color:var(--green)}
+.api-pill.offline{background:var(--red2);border-color:rgba(255,64,96,0.2);color:var(--red)}
+.apidot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+.apidot.offline{background:var(--red);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
 
-/* Header */
-.header{display:flex;justify-content:space-between;align-items:center;padding:20px 28px;background:var(--card);border:1px solid var(--border);border-radius:16px;backdrop-filter:blur(20px)}
-.logo{display:flex;align-items:center;gap:14px}
-.logo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--green),var(--cyan));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.logo h1{font-size:20px;font-weight:700;letter-spacing:-0.5px}
-.logo p{font-size:12px;color:var(--muted);margin-top:2px}
-.header-right{display:flex;align-items:center;gap:16px}
-.api-badge{display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,232,122,0.08);border:1px solid rgba(0,232,122,0.2);border-radius:20px;font-size:12px;font-weight:500;color:var(--green)}
-.api-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+/* ── MAIN LAYOUT ── */
+.app{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
 
-/* Cards */
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
-.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:16px}
+/* ── LEFT SIDEBAR ── */
+.sidebar{width:300px;flex-shrink:0;background:var(--card);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-inner{flex:1;overflow-y:auto;padding:16px}
+.sidebar-inner::-webkit-scrollbar{width:4px}
+.sidebar-inner::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.s-section{margin-bottom:20px}
+.s-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--text3);margin-bottom:10px;display:block}
+textarea#codeRequest{width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius2);padding:12px;color:var(--text);font-family:var(--font);
+  font-size:13px;resize:none;height:100px;outline:none;transition:border-color 0.2s;line-height:1.5}
+textarea#codeRequest:focus{border-color:rgba(0,232,122,0.4)}
+textarea#codeRequest::placeholder{color:var(--text3)}
+.lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.lb{padding:8px;border:1px solid var(--border);border-radius:var(--radius2);
+  background:var(--bg2);color:var(--text3);font-family:var(--font);font-size:12px;
+  font-weight:500;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;
+  justify-content:center;gap:6px}
+.lb:hover{border-color:var(--border2);color:var(--text)}
+.lb.active{border-color:var(--green);background:var(--green3);color:var(--green)}
+.btn-run{width:100%;padding:12px;border:none;border-radius:var(--radius2);
+  background:linear-gradient(135deg,var(--green),var(--green2));
+  color:#000;font-family:var(--font);font-size:14px;font-weight:700;
+  cursor:pointer;transition:all 0.2s;letter-spacing:0.2px;margin-bottom:8px}
+.btn-run:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,232,122,0.25)}
+.btn-run:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.btn-run.running{background:linear-gradient(135deg,var(--amber),#d4890a);animation:rp 1.5s infinite}
+@keyframes rp{0%,100%{box-shadow:0 0 0 0 rgba(255,176,32,0.3)}50%{box-shadow:0 0 0 8px rgba(255,176,32,0)}}
+.btn-sec{width:100%;padding:9px;border:1px solid var(--border);border-radius:var(--radius2);
+  background:transparent;color:var(--text3);font-family:var(--font);font-size:13px;cursor:pointer;transition:all 0.2s}
+.btn-sec:hover{border-color:var(--red);color:var(--red)}
 
-/* Control Panel */
-.control-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:16px}
-.input-label{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;display:block}
-textarea#codeRequest{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;color:var(--text);font-family:var(--font);font-size:14px;resize:vertical;min-height:100px;outline:none;transition:border-color 0.2s}
-textarea#codeRequest:focus{border-color:var(--green)}
-textarea#codeRequest::placeholder{color:var(--muted)}
-.lang-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.lang-btn{padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--muted);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;justify-content:center}
-.lang-btn:hover{border-color:var(--green);color:var(--text)}
-.lang-btn.active{border-color:var(--green);background:rgba(0,232,122,0.1);color:var(--green)}
-.btn-run{width:100%;padding:14px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--green2));color:#000;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px}
-.btn-run:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,232,122,0.3)}
-.btn-run:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
-.btn-run.running{background:linear-gradient(135deg,var(--amber),#e6900a);animation:btnPulse 1.5s infinite}
-@keyframes btnPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,176,32,0.4)}50%{box-shadow:0 0 0 8px rgba(255,176,32,0)}}
-.btn-reset{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--muted);font-family:var(--font);font-size:13px;cursor:pointer;transition:all 0.2s}
-.btn-reset:hover{border-color:var(--red);color:var(--red)}
+/* Agent status in sidebar */
+.agent-row{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:var(--radius2);background:var(--bg2);border:1px solid var(--border);
+  margin-bottom:6px;transition:border-color 0.3s}
+.agent-row.running{border-color:var(--amber)}
+.agent-row.done{border-color:rgba(0,232,122,0.3)}
+.agent-icon{font-size:18px;flex-shrink:0}
+.agent-info{flex:1;min-width:0}
+.agent-name{font-size:12px;font-weight:600}
+.agent-sub{font-size:11px;color:var(--text3);font-family:var(--mono);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.abadge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;
+  text-transform:uppercase;letter-spacing:0.5px;flex-shrink:0}
+.ab-idle{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+.ab-running{background:var(--amber2);color:var(--amber);border:1px solid rgba(255,176,32,0.3)}
+.ab-complete{background:var(--green3);color:var(--green);border:1px solid rgba(0,232,122,0.2)}
+.ab-error{background:var(--red2);color:var(--red);border:1px solid rgba(255,64,96,0.2)}
 
-/* Pipeline Visualizer */
-.pipeline-vis{display:flex;align-items:center;justify-content:space-between;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:14px}
-.pipe-node{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1}
-.pipe-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--border);background:var(--bg2);transition:all 0.4s;position:relative}
-.pipe-icon.active{border-color:var(--amber);background:rgba(255,176,32,0.1);box-shadow:0 0 16px rgba(255,176,32,0.2);animation:nodeGlow 1s infinite}
-.pipe-icon.done{border-color:var(--green);background:rgba(0,232,122,0.1);box-shadow:0 0 12px rgba(0,232,122,0.15)}
-.pipe-icon.done::after{content:'✓';position:absolute;top:-6px;right:-6px;width:16px;height:16px;background:var(--green);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;color:#000;font-weight:700}
-@keyframes nodeGlow{0%,100%{box-shadow:0 0 16px rgba(255,176,32,0.2)}50%{box-shadow:0 0 28px rgba(255,176,32,0.4)}}
-.pipe-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-.pipe-arrow{color:var(--border);font-size:18px;flex-shrink:0;transition:color 0.4s}
-.pipe-arrow.lit{color:var(--green)}
+/* Pipeline mini viz */
+.mini-pipe{display:flex;align-items:center;justify-content:space-between;
+  padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);margin-bottom:6px}
+.mpn{display:flex;flex-direction:column;align-items:center;gap:4px}
+.mpicon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:14px;border:1px solid var(--border);background:var(--bg3);
+  transition:all 0.4s;position:relative}
+.mpicon.active{border-color:var(--amber);background:var(--amber2);animation:mg 1s infinite}
+.mpicon.done{border-color:var(--green);background:var(--green3)}
+.mpicon.done::after{content:'✓';position:absolute;top:-5px;right:-5px;width:14px;height:14px;
+  background:var(--green);border-radius:50%;font-size:8px;display:flex;align-items:center;
+  justify-content:center;color:#000;font-weight:700}
+@keyframes mg{0%,100%{box-shadow:0 0 0 0 rgba(255,176,32,0.4)}50%{box-shadow:0 0 0 6px rgba(255,176,32,0)}}
+.mplbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+.mparr{color:var(--border);font-size:12px;transition:color 0.3s}
+.mparr.lit{color:var(--green)}
 
-/* Agent Cards */
-.agent-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;transition:border-color 0.3s}
-.agent-card.running{border-color:var(--amber)}
-.agent-card.done{border-color:rgba(0,232,122,0.3)}
-.agent-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.agent-name{font-size:13px;font-weight:600}
-.agent-badge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px}
-.badge-idle{background:var(--bg2);color:var(--muted);border:1px solid var(--border)}
-.badge-running{background:rgba(255,176,32,0.15);color:var(--amber);border:1px solid rgba(255,176,32,0.3)}
-.badge-complete{background:rgba(0,232,122,0.1);color:var(--green);border:1px solid rgba(0,232,122,0.2)}
-.badge-error{background:rgba(255,64,96,0.1);color:var(--red);border:1px solid rgba(255,64,96,0.2)}
-.agent-output{font-size:12px;color:var(--muted);font-family:var(--mono);line-height:1.5;min-height:36px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+/* Stats in sidebar */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);
+  padding:10px;text-align:center}
+.stat-val{font-size:18px;font-weight:700;font-family:var(--mono)}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:0.3px}
+
+/* Iter dots */
+.iter-row{display:flex;align-items:center;gap:6px}
+.idot{width:24px;height:24px;border-radius:50%;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;
+  color:var(--text3);background:var(--bg2);transition:all 0.3s;flex-shrink:0}
+.idot.active{border-color:var(--amber);color:var(--amber);background:var(--amber2)}
+.idot.done{border-color:var(--green);color:var(--green);background:var(--green3)}
+.iline{flex:1;height:1px;background:var(--border)}
+
+/* ── CENTER: EDITOR ── */
+.editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.editor-topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:40px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.editor-tabs{display:flex;align-items:center;gap:2px}
+.etab{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:4px;
+  font-size:12px;font-weight:500;cursor:pointer;color:var(--text3);
+  border:none;background:transparent;transition:all 0.2s;font-family:var(--mono)}
+.etab:hover{color:var(--text)}
+.etab.active{background:var(--bg3);color:var(--text);border-bottom:2px solid var(--green)}
+.etab-dot{width:8px;height:8px;border-radius:50%;background:var(--border2)}
+.etab-dot.modified{background:var(--amber)}
+.editor-actions{display:flex;align-items:center;gap:8px}
+.ea-btn{padding:5px 12px;border-radius:6px;font-family:var(--font);font-size:12px;
+  font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid var(--border);
+  background:transparent;color:var(--text2)}
+.ea-btn:hover{border-color:var(--green);color:var(--green)}
+.ea-btn.primary{background:var(--green3);border-color:rgba(0,232,122,0.3);color:var(--green)}
+#monacoContainer{flex:1;overflow:hidden}
+
+/* Editor placeholder */
+.editor-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;color:var(--text3)}
+.ep-icon{font-size:48px;opacity:0.3}
+.ep-title{font-size:16px;font-weight:500;color:var(--text2)}
+.ep-sub{font-size:13px;text-align:center;max-width:300px;line-height:1.6}
+
+/* Loading bar */
+.loading-bar{height:2px;background:var(--border);position:relative;overflow:hidden;flex-shrink:0}
+.loading-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));
+  width:0%;transition:width 0.5s ease;border-radius:2px}
+.loading-fill.indeterminate{width:40%;animation:slide 1.5s infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+
+/* ── RIGHT PANEL ── */
+.right-panel{width:320px;flex-shrink:0;background:var(--card);
+  border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.rp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.rptab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;
+  cursor:pointer;color:var(--text3);border:none;background:transparent;
+  border-bottom:2px solid transparent;transition:all 0.2s;font-family:var(--font)}
+.rptab.active{color:var(--text);border-bottom-color:var(--green)}
+.rptab:hover{color:var(--text2)}
+.rp-content{flex:1;overflow-y:auto;padding:14px}
+.rp-content::-webkit-scrollbar{width:4px}
+.rp-content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
 /* Findings */
-.findings-wrap{flex:1}
-.findings-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.findings-count{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);color:var(--muted)}
-.findings-count.has-findings{background:rgba(255,64,96,0.1);border-color:rgba(255,64,96,0.3);color:var(--red)}
-.finding-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);margin-bottom:8px;animation:slideIn 0.3s ease}
-@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
-.sev-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;flex-shrink:0;margin-top:1px}
-.sev-CRITICAL{background:rgba(255,64,96,0.2);color:var(--red);border:1px solid rgba(255,64,96,0.3)}
-.sev-HIGH{background:rgba(255,100,30,0.2);color:#ff641e;border:1px solid rgba(255,100,30,0.3)}
-.sev-MEDIUM{background:rgba(255,176,32,0.15);color:var(--amber);border:1px solid rgba(255,176,32,0.3)}
-.sev-LOW{background:rgba(59,130,246,0.15);color:var(--blue);border:1px solid rgba(59,130,246,0.3)}
-.finding-text{flex:1;min-width:0}
-.finding-desc{font-size:12px;color:var(--text);line-height:1.4}
-.finding-cwe{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px}
-.findings-empty{font-size:13px;color:var(--muted);text-align:center;padding:20px 0}
+.fheader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.fc{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;
+  background:var(--bg2);border:1px solid var(--border);color:var(--text3)}
+.fc.has{background:var(--red2);border-color:rgba(255,64,96,0.25);color:var(--red)}
+.finding{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:var(--radius2);
+  background:var(--bg2);border:1px solid var(--border);margin-bottom:8px;animation:fin 0.3s ease}
+@keyframes fin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.sb{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;flex-shrink:0;margin-top:2px}
+.s-CRITICAL{background:rgba(255,64,96,0.2);color:var(--red);border:1px solid rgba(255,64,96,0.3)}
+.s-HIGH{background:rgba(249,115,22,0.2);color:#f97316;border:1px solid rgba(249,115,22,0.3)}
+.s-MEDIUM{background:var(--amber2);color:var(--amber);border:1px solid rgba(255,176,32,0.3)}
+.s-LOW{background:rgba(59,130,246,0.15);color:var(--blue);border:1px solid rgba(59,130,246,0.3)}
+.fdesc{font-size:12px;color:var(--text);line-height:1.4}
+.fcwe{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.fempty{text-align:center;padding:32px 0;color:var(--text3);font-size:13px}
 
-/* Terminal Log */
-.log-wrap{background:var(--bg);border:1px solid var(--border);border-radius:10px;height:200px;overflow-y:auto;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.7}
-.log-wrap::-webkit-scrollbar{width:4px}
-.log-wrap::-webkit-scrollbar-track{background:transparent}
-.log-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.log-line{display:block}
-.log-info{color:var(--muted)}
-.log-success{color:var(--green)}
-.log-warning{color:var(--amber)}
-.log-error{color:var(--red)}
-.log-builder{color:var(--cyan)}
-.log-hacker{color:#a855f7}
-.log-auditor{color:var(--blue)}
-.log-clear{float:right;font-size:11px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:var(--mono);padding:0}
-.log-clear:hover{color:var(--red)}
+/* Terminal */
+.terminal{background:var(--bg);border-radius:var(--radius2);
+  height:100%;overflow-y:auto;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.8}
+.terminal::-webkit-scrollbar{width:4px}
+.terminal::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.tl{display:block}
+.t-info{color:var(--text3)}.t-success{color:var(--green)}.t-warning{color:var(--amber)}
+.t-error{color:var(--red)}.t-builder{color:var(--cyan)}.t-hacker{color:var(--purple)}.t-auditor{color:var(--blue)}
 
-/* Results */
-.results-panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;display:none}
-.results-panel.show{display:block;animation:fadeUp 0.4s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.verdict-banner{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-radius:10px;margin-bottom:20px}
-.verdict-banner.approved{background:rgba(0,232,122,0.1);border:1px solid rgba(0,232,122,0.3)}
-.verdict-banner.escalated{background:rgba(255,64,96,0.08);border:1px solid rgba(255,64,96,0.3)}
-.verdict-text{font-size:22px;font-weight:700;letter-spacing:-0.5px}
-.verdict-banner.approved .verdict-text{color:var(--green)}
-.verdict-banner.escalated .verdict-text{color:var(--red)}
-.verdict-meta{font-size:12px;color:var(--muted);margin-top:4px}
-.result-actions{display:flex;gap:10px}
-.btn-action{padding:8px 16px;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid var(--border);background:var(--bg2);color:var(--text)}
-.btn-action:hover{border-color:var(--green);color:var(--green)}
-.code-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.code-lang-tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:4px;background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2);color:var(--cyan);text-transform:uppercase;font-family:var(--mono)}
-pre#resultCode{border-radius:10px;max-height:400px;overflow-y:auto;font-size:13px;margin:0}
-pre#resultCode::-webkit-scrollbar{width:4px}
-pre#resultCode::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+/* Report tab */
+.report-section{margin-bottom:16px}
+.report-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--text3);margin-bottom:8px}
+.report-value{font-size:13px;color:var(--text);line-height:1.5}
+.verdict-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;
+  border-radius:20px;font-size:14px;font-weight:700}
+.verdict-chip.approved{background:var(--green3);border:1px solid rgba(0,232,122,0.25);color:var(--green)}
+.verdict-chip.escalated{background:var(--red2);border:1px solid rgba(255,64,96,0.25);color:var(--red)}
+.dl-btn{width:100%;padding:10px;border-radius:var(--radius2);font-family:var(--font);
+  font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;
+  border:1px solid rgba(0,232,122,0.3);background:var(--green3);color:var(--green);margin-top:8px}
+.dl-btn:hover{background:rgba(0,232,122,0.15)}
 
-/* Iteration dots */
-.iter-dots{display:flex;gap:8px;align-items:center}
-.iter-dot{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--muted);background:var(--bg2);transition:all 0.3s}
-.iter-dot.active{border-color:var(--amber);color:var(--amber);background:rgba(255,176,32,0.1)}
-.iter-dot.done{border-color:var(--green);color:var(--green);background:rgba(0,232,122,0.1)}
-
-/* Stats row */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
-.stat-val{font-size:24px;font-weight:700;font-family:var(--mono)}
-.stat-label{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px}
-.stat-val.green{color:var(--green)}
-.stat-val.red{color:var(--red)}
-.stat-val.amber{color:var(--amber)}
-
-/* Loading spinner in button */
+/* Spinner */
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,0.3);border-top-color:#000;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:6px}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,0.2);
+  border-top-color:#000;border-radius:50%;animation:spin 0.8s linear infinite;
+  vertical-align:middle;margin-right:6px}
 
-@media(max-width:900px){
-  .grid-main{grid-template-columns:1fr}
-  .grid-agents{grid-template-columns:1fr}
-  .grid-bottom{grid-template-columns:1fr}
-  .stats-row{grid-template-columns:repeat(2,1fr)}
+/* Scrollbar global */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+@media(max-width:1000px){
+  .sidebar{width:260px}
+  .right-panel{width:280px}
 }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="logo">
-      <div class="logo-icon">🔐</div>
-      <div>
-        <h1>Secure AI Coding Assistant</h1>
-        <p>Adversarial Multi-Agent Security Pipeline</p>
-      </div>
-    </div>
-    <div class="header-right">
-      <div class="api-badge">
-        <div class="api-dot"></div>
-        <span id="apiLabel">Groq · Llama 3.3 70B</span>
-      </div>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🔐</div>
+    <span class="logo-text">Secure AI Coding Assistant</span>
+    <span class="logo-badge">PRO</span>
+  </div>
+  <div class="topbar-center">
+    <button class="tab active" onclick="switchTab(this,'editor')">Editor</button>
+    <button class="tab" onclick="switchTab(this,'history')">History</button>
+    <button class="tab" onclick="switchTab(this,'docs')">Docs</button>
+  </div>
+  <div class="topbar-right">
+    <div class="api-pill" id="apiPill">
+      <div class="apidot" id="apiDot"></div>
+      <span id="apiLabel">Connecting...</span>
     </div>
   </div>
+</div>
 
-  <!-- Pipeline Visualizer -->
-  <div class="pipeline-vis" style="margin-top:20px">
-    <div class="pipe-node">
-      <div class="pipe-icon" id="pipeUser">📝</div>
-      <div class="pipe-label">User</div>
-    </div>
-    <div class="pipe-arrow" id="arr1">→</div>
-    <div class="pipe-node">
-      <div class="pipe-icon" id="pipeBuilder">🔨</div>
-      <div class="pipe-label">Builder</div>
-    </div>
-    <div class="pipe-arrow" id="arr2">→</div>
-    <div class="pipe-node">
-      <div class="pipe-icon" id="pipeHacker">💀</div>
-      <div class="pipe-label">Hacker</div>
-    </div>
-    <div class="pipe-arrow" id="arr3">→</div>
-    <div class="pipe-node">
-      <div class="pipe-icon" id="pipeAuditor">⚖️</div>
-      <div class="pipe-label">Auditor</div>
-    </div>
-    <div class="pipe-arrow" id="arr4">→</div>
-    <div class="pipe-node">
-      <div class="pipe-icon" id="pipeResult">🎯</div>
-      <div class="pipe-label">Result</div>
-    </div>
-  </div>
+<!-- MAIN APP -->
+<div class="app">
 
-  <!-- Agent Cards -->
-  <div class="grid-agents" style="margin-top:20px">
-    <div class="agent-card" id="agentBuilder">
-      <div class="agent-header">
-        <div class="agent-name">🔨 The Builder</div>
-        <div class="agent-badge badge-idle" id="badgeBuilder">IDLE</div>
-      </div>
-      <div class="agent-output" id="outBuilder">Waiting for request...</div>
-    </div>
-    <div class="agent-card" id="agentHacker">
-      <div class="agent-header">
-        <div class="agent-name">💀 Red Team Hacker</div>
-        <div class="agent-badge badge-idle" id="badgeHacker">IDLE</div>
-      </div>
-      <div class="agent-output" id="outHacker">Waiting for code to analyze...</div>
-    </div>
-    <div class="agent-card" id="agentAuditor">
-      <div class="agent-header">
-        <div class="agent-name">⚖️ Security Auditor</div>
-        <div class="agent-badge badge-idle" id="badgeAuditor">IDLE</div>
-      </div>
-      <div class="agent-output" id="outAuditor">Waiting for hacker report...</div>
-    </div>
-  </div>
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-inner">
 
-  <!-- Main Grid -->
-  <div class="grid-main">
-
-    <!-- Left: Control Panel -->
-    <div class="control-panel">
-      <div class="card-title">Control Panel</div>
-
-      <div>
-        <label class="input-label">Describe what to build</label>
-        <textarea id="codeRequest" placeholder="e.g. Build a secure JWT authentication system with refresh tokens and rate limiting..."></textarea>
+      <!-- Request -->
+      <div class="s-section">
+        <span class="s-label">Your Request</span>
+        <textarea id="codeRequest" placeholder="e.g. Build a secure JWT authentication system with refresh tokens, rate limiting, and session management..."></textarea>
       </div>
 
-      <div>
-        <label class="input-label">Language</label>
+      <!-- Language -->
+      <div class="s-section">
+        <span class="s-label">Language</span>
         <div class="lang-grid">
-          <button class="lang-btn active" onclick="setLang(this,'python')">🐍 Python</button>
-          <button class="lang-btn" onclick="setLang(this,'javascript')">🌐 JavaScript</button>
-          <button class="lang-btn" onclick="setLang(this,'go')">🔵 Go</button>
-          <button class="lang-btn" onclick="setLang(this,'rust')">🦀 Rust</button>
+          <button class="lb active" onclick="setLang(this,'python')">🐍 Python</button>
+          <button class="lb" onclick="setLang(this,'javascript')">🌐 JavaScript</button>
+          <button class="lb" onclick="setLang(this,'go')">🔵 Go</button>
+          <button class="lb" onclick="setLang(this,'rust')">🦀 Rust</button>
         </div>
       </div>
 
-      <div>
-        <label class="input-label">Iteration limit</label>
-        <div style="display:flex;align-items:center;gap:10px">
-          <input type="range" id="iterSlider" min="1" max="3" value="1" style="flex:1" oninput="document.getElementById('iterVal').textContent=this.value">
-          <span id="iterVal" style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green);min-width:16px">1</span>
+      <!-- Run -->
+      <div class="s-section">
+        <button class="btn-run" id="runBtn" onclick="runPipeline()">▶ RUN PIPELINE</button>
+        <button class="btn-sec" onclick="resetAll()">↺ Reset Everything</button>
+      </div>
+
+      <!-- Pipeline viz -->
+      <div class="s-section">
+        <span class="s-label">Pipeline</span>
+        <div class="mini-pipe">
+          <div class="mpn"><div class="mpicon" id="pn0">📝</div><div class="mplbl">User</div></div>
+          <div class="mparr" id="pa0">›</div>
+          <div class="mpn"><div class="mpicon" id="pn1">🔨</div><div class="mplbl">Build</div></div>
+          <div class="mparr" id="pa1">›</div>
+          <div class="mpn"><div class="mpicon" id="pn2">💀</div><div class="mplbl">Hack</div></div>
+          <div class="mparr" id="pa2">›</div>
+          <div class="mpn"><div class="mpicon" id="pn3">⚖️</div><div class="mplbl">Audit</div></div>
+          <div class="mparr" id="pa3">›</div>
+          <div class="mpn"><div class="mpicon" id="pn4">🎯</div><div class="mplbl">Done</div></div>
         </div>
       </div>
 
-      <button class="btn-run" id="runBtn" onclick="runPipeline()">▶ RUN PIPELINE</button>
-      <button class="btn-reset" onclick="resetAll()">↺ Reset</button>
-
-      <!-- Iteration tracker -->
-      <div>
-        <label class="input-label">Iteration Progress</label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="iter-dot" id="iter1">1</div>
-          <div style="flex:1;height:1px;background:var(--border)"></div>
-          <div class="iter-dot" id="iter2">2</div>
-          <div style="flex:1;height:1px;background:var(--border)"></div>
-          <div class="iter-dot" id="iter3">3</div>
+      <!-- Agents -->
+      <div class="s-section">
+        <span class="s-label">Agents</span>
+        <div class="agent-row" id="ar0">
+          <div class="agent-icon">🔨</div>
+          <div class="agent-info">
+            <div class="agent-name">Builder</div>
+            <div class="agent-sub" id="ao0">Waiting...</div>
+          </div>
+          <div class="abadge ab-idle" id="ab0">IDLE</div>
+        </div>
+        <div class="agent-row" id="ar1">
+          <div class="agent-icon">💀</div>
+          <div class="agent-info">
+            <div class="agent-name">Red Team Hacker</div>
+            <div class="agent-sub" id="ao1">Waiting...</div>
+          </div>
+          <div class="abadge ab-idle" id="ab1">IDLE</div>
+        </div>
+        <div class="agent-row" id="ar2">
+          <div class="agent-icon">⚖️</div>
+          <div class="agent-info">
+            <div class="agent-name">Security Auditor</div>
+            <div class="agent-sub" id="ao2">Waiting...</div>
+          </div>
+          <div class="abadge ab-idle" id="ab2">IDLE</div>
         </div>
       </div>
-    </div>
 
-    <!-- Right: Findings + Log -->
-    <div style="display:flex;flex-direction:column;gap:16px">
-
-      <!-- Findings -->
-      <div class="card" style="flex:1">
-        <div class="findings-header">
-          <div class="card-title" style="margin:0">Security Findings</div>
-          <div class="findings-count" id="findingsCount">0 findings</div>
-        </div>
-        <div id="findingsList">
-          <div class="findings-empty">Run the pipeline to see security findings</div>
+      <!-- Iteration -->
+      <div class="s-section">
+        <span class="s-label">Iteration Progress</span>
+        <div class="iter-row">
+          <div class="idot" id="id1">1</div>
+          <div class="iline"></div>
+          <div class="idot" id="id2">2</div>
+          <div class="iline"></div>
+          <div class="idot" id="id3">3</div>
         </div>
       </div>
 
-      <!-- Terminal Log -->
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div class="card-title" style="margin:0">Live Terminal</div>
-          <button class="log-clear" onclick="clearLog()">CLEAR</button>
-        </div>
-        <div class="log-wrap" id="logWrap">
-          <span class="log-line log-info">[system] Secure AI Coding Assistant ready</span><br>
-          <span class="log-line log-info">[system] Enter a request and click RUN PIPELINE</span><br>
+      <!-- Stats -->
+      <div class="s-section">
+        <span class="s-label">Session Stats</span>
+        <div class="stats-grid">
+          <div class="stat"><div class="stat-val green" id="sRuns">0</div><div class="stat-lbl">Runs</div></div>
+          <div class="stat"><div class="stat-val" style="color:var(--red)" id="sFindings">0</div><div class="stat-lbl">Findings</div></div>
+          <div class="stat"><div class="stat-val" style="color:var(--amber)" id="sTime">—</div><div class="stat-lbl">Last Time</div></div>
+          <div class="stat"><div class="stat-val" id="sVerdict" style="font-size:11px;padding-top:4px">—</div><div class="stat-lbl">Verdict</div></div>
         </div>
       </div>
 
     </div>
   </div>
 
-  <!-- Stats Row -->
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-val green" id="statRuns">0</div>
-      <div class="stat-label">Pipelines Run</div>
+  <!-- CENTER: EDITOR -->
+  <div class="editor-area">
+    <div class="loading-bar"><div class="loading-fill" id="loadingFill"></div></div>
+    <div class="editor-topbar">
+      <div class="editor-tabs">
+        <div class="etab active" id="etabGenerated">
+          <div class="etab-dot modified" id="edotGenerated"></div>
+          generated_code.py
+        </div>
+      </div>
+      <div class="editor-actions">
+        <button class="ea-btn" onclick="copyCode()" id="copyBtn">📋 Copy</button>
+        <button class="ea-btn primary" onclick="formatCode()">⚡ Format</button>
+      </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-val red" id="statFindings">0</div>
-      <div class="stat-label">Total Findings</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-val amber" id="statTime">—</div>
-      <div class="stat-label">Last Run Time</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-val" id="statVerdict" style="font-size:14px;padding-top:4px">—</div>
-      <div class="stat-label">Last Verdict</div>
+    <div id="monacoContainer">
+      <div class="editor-placeholder" id="editorPlaceholder">
+        <div class="ep-icon">🔐</div>
+        <div class="ep-title">Ready to generate secure code</div>
+        <div class="ep-sub">Type your request in the left panel and click RUN PIPELINE. The generated code will appear here in a full VS Code-style editor.</div>
+      </div>
     </div>
   </div>
 
-  <!-- Results Panel -->
-  <div class="results-panel" id="resultsPanel" style="margin-top:20px">
-    <div class="verdict-banner" id="verdictBanner">
-      <div>
-        <div class="verdict-text" id="verdictText">APPROVED</div>
-        <div class="verdict-meta" id="verdictMeta">Pipeline complete</div>
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="rp-tabs">
+      <button class="rptab active" onclick="switchRpTab(this,'findings')">Findings</button>
+      <button class="rptab" onclick="switchRpTab(this,'terminal')">Terminal</button>
+      <button class="rptab" onclick="switchRpTab(this,'report')">Report</button>
+    </div>
+
+    <!-- Findings tab -->
+    <div class="rp-content" id="rpt-findings">
+      <div class="fheader">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3)">Security Findings</span>
+        <div class="fc" id="fcount">0 findings</div>
       </div>
-      <div class="result-actions">
-        <button class="btn-action" onclick="copyCode()">📋 Copy Code</button>
-        <button class="btn-action" onclick="downloadReport()">⬇ Download Report</button>
+      <div id="flist"><div class="fempty">Run the pipeline to see security findings</div></div>
+    </div>
+
+    <!-- Terminal tab -->
+    <div class="rp-content" id="rpt-terminal" style="display:none;padding:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3)">Live Terminal</span>
+        <button onclick="clearLog()" style="background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer">CLEAR</button>
+      </div>
+      <div class="terminal" id="termBox">
+        <span class="tl t-info">[system] Secure AI Coding Assistant ready</span><br>
+        <span class="tl t-info">[system] Enter request and click RUN PIPELINE</span><br>
       </div>
     </div>
-    <div class="code-header">
-      <div class="card-title" style="margin:0">Generated Code</div>
-      <div class="code-lang-tag" id="codeLangTag">python</div>
+
+    <!-- Report tab -->
+    <div class="rp-content" id="rpt-report" style="display:none">
+      <div id="reportContent">
+        <div class="fempty">Run the pipeline to generate a report</div>
+      </div>
     </div>
-    <pre id="resultCode"><code id="codeBlock"></code></pre>
   </div>
 
 </div>
 
 <script>
-const API = 'https://secure-ai-coding-assistant.onrender.com';
+// ── State ──
 let currentLang = 'python';
 let isRunning = false;
 let findings = [];
-let totalRuns = 0;
-let totalFindings = 0;
-let lastBuilderOutput = '';
-let lastHackerReport = '';
+let totalRuns = 0, totalFindings = 0;
+let lastBuilder = '', lastHacker = '', lastVerdict = '';
 let startTime = null;
+let monacoEditor = null;
+let monacoReady = false;
+let history = [];
 
+// ── Monaco Editor Init ──
+require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
+require(['vs/editor/editor.main'], function() {
+  monacoReady = true;
+  // Define custom dark theme
+  monaco.editor.defineTheme('secureai', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'comment', foreground: '4a5568', fontStyle: 'italic' },
+      { token: 'keyword', foreground: '00e87a' },
+      { token: 'string', foreground: '06b6d4' },
+      { token: 'number', foreground: 'ffb020' },
+      { token: 'function', foreground: '3b82f6' },
+    ],
+    colors: {
+      'editor.background': '#07090f',
+      'editor.foreground': '#e2e8f0',
+      'editor.lineHighlightBackground': '#0e1422',
+      'editor.selectionBackground': '#1a2740',
+      'editorCursor.foreground': '#00e87a',
+      'editorLineNumber.foreground': '#2d3748',
+      'editorLineNumber.activeForeground': '#00e87a',
+      'editor.inactiveSelectionBackground': '#1a2740',
+      'editorGutter.background': '#07090f',
+      'scrollbarSlider.background': '#1a274060',
+      'scrollbarSlider.hoverBackground': '#1a2740',
+    }
+  });
+});
+
+function initEditor(code, lang) {
+  const container = document.getElementById('monacoContainer');
+  document.getElementById('editorPlaceholder')?.remove();
+
+  if (monacoEditor) {
+    monacoEditor.setValue(code);
+    monaco.editor.setModelLanguage(monacoEditor.getModel(), lang === 'javascript' ? 'javascript' : lang === 'rust' ? 'rust' : lang === 'go' ? 'go' : 'python');
+    return;
+  }
+
+  monacoEditor = monaco.editor.create(container, {
+    value: code,
+    language: lang === 'javascript' ? 'javascript' : lang === 'rust' ? 'rust' : lang === 'go' ? 'go' : 'python',
+    theme: 'secureai',
+    fontSize: 13,
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    fontLigatures: true,
+    minimap: { enabled: true, scale: 1 },
+    scrollBeyondLastLine: false,
+    lineNumbers: 'on',
+    renderLineHighlight: 'line',
+    cursorBlinking: 'smooth',
+    cursorSmoothCaretAnimation: 'on',
+    smoothScrolling: true,
+    wordWrap: 'on',
+    padding: { top: 16, bottom: 16 },
+    automaticLayout: true,
+    bracketPairColorization: { enabled: true },
+    guides: { bracketPairs: true },
+    suggest: { enabled: true },
+    quickSuggestions: true,
+    folding: true,
+    renderWhitespace: 'selection',
+  });
+
+  // Update tab name based on lang
+  updateEditorTab(lang);
+}
+
+function updateEditorTab(lang) {
+  const exts = {python:'py',javascript:'js',go:'go',rust:'rs'};
+  document.getElementById('etabGenerated').innerHTML = 
+    `<div class="etab-dot modified" id="edotGenerated"></div> generated_code.${exts[lang]||'py'}`;
+}
+
+// ── Helpers ──
 function setLang(btn, lang) {
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.lb').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentLang = lang;
-  document.getElementById('codeLangTag').textContent = lang;
+  updateEditorTab(lang);
+  if (monacoEditor) {
+    const langMap = {python:'python',javascript:'javascript',go:'go',rust:'rust'};
+    monaco.editor.setModelLanguage(monacoEditor.getModel(), langMap[lang] || 'python');
+  }
+}
+
+function switchTab(btn, tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function switchRpTab(btn, tab) {
+  document.querySelectorAll('.rptab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  ['findings','terminal','report'].forEach(t => {
+    const el = document.getElementById('rpt-' + t);
+    if(el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  // Fix terminal height
+  if (tab === 'terminal') {
+    const tb = document.getElementById('termBox');
+    if (tb) { tb.style.height = 'calc(100vh - 200px)'; tb.scrollTop = tb.scrollHeight; }
+  }
 }
 
 function log(msg, type='info') {
-  const wrap = document.getElementById('logWrap');
-  const now = new Date().toLocaleTimeString();
-  wrap.innerHTML += `<span class="log-line log-${type}">[${now}] ${msg}</span><br>`;
-  wrap.scrollTop = wrap.scrollHeight;
+  const box = document.getElementById('termBox');
+  const t = new Date().toLocaleTimeString();
+  box.innerHTML += `<span class="tl t-${type}">[${t}] ${msg}</span><br>`;
+  box.scrollTop = box.scrollHeight;
 }
 
 function clearLog() {
-  document.getElementById('logWrap').innerHTML = '<span class="log-line log-info">[system] Log cleared</span><br>';
+  document.getElementById('termBox').innerHTML = '<span class="tl t-info">[system] Log cleared</span><br>';
 }
 
-function setPipeNode(id, state) {
-  const el = document.getElementById(id);
-  el.className = 'pipe-icon' + (state ? ' ' + state : '');
+function setLoading(pct, indeterminate=false) {
+  const fill = document.getElementById('loadingFill');
+  if (indeterminate) { fill.className = 'loading-fill indeterminate'; fill.style.width = ''; }
+  else { fill.className = 'loading-fill'; fill.style.width = pct + '%'; }
 }
 
-function setArrow(id, lit) {
-  document.getElementById(id).className = 'pipe-arrow' + (lit ? ' lit' : '');
+function pipeNode(i, state) {
+  const el = document.getElementById('pn'+i);
+  el.className = 'mpicon' + (state ? ' '+state : '');
 }
-
-function setAgent(name, state, output) {
-  const card = document.getElementById('agentCard' in window ? name : 'agent' + name.charAt(0).toUpperCase() + name.slice(1));
-  const badge = document.getElementById('badge' + name.charAt(0).toUpperCase() + name.slice(1));
-  const out = document.getElementById('out' + name.charAt(0).toUpperCase() + name.slice(1));
-  if (card) {
-    card.className = 'agent-card' + (state === 'running' ? ' running' : state === 'complete' ? ' done' : '');
-  }
-  if (badge) {
-    badge.className = 'agent-badge badge-' + (state === 'complete' ? 'complete' : state === 'running' ? 'running' : state === 'error' ? 'error' : 'idle');
-    badge.textContent = state.toUpperCase();
-  }
-  if (out && output) {
-    out.textContent = output.length > 150 ? output.substring(0, 150) + '...' : output;
-  }
+function pipeArrow(i, on) {
+  document.getElementById('pa'+i).className = 'mparr' + (on ? ' lit' : '');
 }
-
+function agentSet(i, state, out) {
+  document.getElementById('ar'+i).className = 'agent-row' + (state==='running'?' running':state==='done'?' done':'');
+  const b = document.getElementById('ab'+i);
+  b.className = 'abadge ab-' + (state==='complete'?'complete':state==='running'?'running':state==='error'?'error':'idle');
+  b.textContent = state.toUpperCase();
+  if(out) document.getElementById('ao'+i).textContent = out.length > 40 ? out.substring(0,40)+'...' : out;
+}
+function iterDot(n, state) {
+  const el = document.getElementById('id'+n);
+  el.className = 'idot' + (state==='active'?' active':state==='done'?' done':'');
+}
 function addFinding(sev, cwe, desc) {
+  if (!desc || desc.length < 3) return;
   findings.push({sev, cwe, desc});
-  const list = document.getElementById('findingsList');
-  if (list.querySelector('.findings-empty')) list.innerHTML = '';
-  const item = document.createElement('div');
-  item.className = 'finding-item';
-  item.innerHTML = `<div class="sev-badge sev-${sev}">${sev}</div><div class="finding-text"><div class="finding-desc">${desc.substring(0,120)}</div><div class="finding-cwe">${cwe}</div></div>`;
-  list.appendChild(item);
-  const count = document.getElementById('findingsCount');
-  count.textContent = findings.length + ' finding' + (findings.length !== 1 ? 's' : '');
-  count.className = 'findings-count' + (findings.length > 0 ? ' has-findings' : '');
+  const list = document.getElementById('flist');
+  if (list.querySelector('.fempty')) list.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = 'finding';
+  d.innerHTML = `<div class="sb s-${sev}">${sev}</div><div><div class="fdesc">${desc.substring(0,120)}</div><div class="fcwe">${cwe}</div></div>`;
+  list.appendChild(d);
+  const fc = document.getElementById('fcount');
+  fc.textContent = findings.length + (findings.length===1?' finding':' findings');
+  fc.className = 'fc' + (findings.length > 0 ? ' has' : '');
 }
 
-function setIterDot(n, state) {
-  const el = document.getElementById('iter' + n);
-  if (!el) return;
-  el.className = 'iter-dot' + (state === 'active' ? ' active' : state === 'done' ? ' done' : '');
-}
-
+// ── Main Pipeline ──
 async function runPipeline() {
   if (isRunning) return;
-  const request = document.getElementById('codeRequest').value.trim();
-  if (!request) {
-    document.getElementById('codeRequest').focus();
+  const req = document.getElementById('codeRequest').value.trim();
+  if (!req) {
     document.getElementById('codeRequest').style.borderColor = 'var(--red)';
     setTimeout(() => document.getElementById('codeRequest').style.borderColor = '', 2000);
     log('Please enter a request first', 'error');
+    // Switch to terminal to show error
+    switchRpTab(document.querySelectorAll('.rptab')[1], 'terminal');
     return;
   }
 
   isRunning = true;
   startTime = Date.now();
   findings = [];
-  document.getElementById('findingsList').innerHTML = '<div class="findings-empty">Scanning...</div>';
-  document.getElementById('findingsCount').textContent = '0 findings';
-  document.getElementById('findingsCount').className = 'findings-count';
-  document.getElementById('resultsPanel').classList.remove('show');
+  document.getElementById('flist').innerHTML = '<div class="fempty">Scanning...</div>';
+  document.getElementById('fcount').textContent = '0 findings';
+  document.getElementById('fcount').className = 'fc';
 
   const btn = document.getElementById('runBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Running Pipeline...';
+  btn.innerHTML = '<span class="spinner"></span>Analyzing...';
   btn.classList.add('running');
 
-  // Reset nodes
-  ['pipeUser','pipeBuilder','pipeHacker','pipeAuditor','pipeResult'].forEach(id => setPipeNode(id, ''));
-  ['arr1','arr2','arr3','arr4'].forEach(id => setArrow(id, false));
-  setAgent('builder', 'idle', 'Waiting...');
-  setAgent('hacker', 'idle', 'Waiting...');
-  setAgent('auditor', 'idle', 'Waiting...');
-  [1,2,3].forEach(n => setIterDot(n, ''));
+  // Reset pipeline
+  [0,1,2,3,4].forEach(i => pipeNode(i,''));
+  [0,1,2,3].forEach(i => pipeArrow(i,false));
+  agentSet(0,'idle','Waiting...'); agentSet(1,'idle','Waiting...'); agentSet(2,'idle','Waiting...');
+  [1,2,3].forEach(n => iterDot(n,''));
+  setLoading(0);
 
-  log('Pipeline started: ' + request.substring(0, 60), 'success');
-  setPipeNode('pipeUser', 'done');
-  setArrow('arr1', true);
-  setIterDot(1, 'active');
+  // Switch to terminal tab to show live logs
+  switchRpTab(document.querySelectorAll('.rptab')[1], 'terminal');
 
-  // Builder phase
-  setPipeNode('pipeBuilder', 'active');
-  setAgent('builder', 'running', 'Generating secure ' + currentLang + ' code...');
+  log('Pipeline started → ' + req.substring(0,50), 'success');
+  setLoading(0, true); // indeterminate
+  pipeNode(0,'done'); pipeArrow(0,true); iterDot(1,'active');
+  pipeNode(1,'active');
+  agentSet(0,'running','Generating ' + currentLang + ' code...');
   log('Builder agent initializing...', 'builder');
+  log('Language: ' + currentLang, 'info');
 
   let result;
   try {
-    const res = await fetch(API + '/api/run', {
+    const res = await fetch('/api/run', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ request, language: currentLang })
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({request: req, language: currentLang})
     });
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      const txt = await res.text();
+      throw new Error('Server error: ' + txt.substring(0,80));
+    }
     result = await res.json();
     if (result.status === 'error') throw new Error(result.message);
   } catch(err) {
-    log('API Error: ' + err.message, 'error');
-    setAgent('builder', 'error', 'Error: ' + err.message);
-    setPipeNode('pipeBuilder', '');
-    btn.disabled = false;
-    btn.innerHTML = '▶ RUN PIPELINE';
-    btn.classList.remove('running');
+    log('Error: ' + err.message, 'error');
+    agentSet(0,'error','Error occurred');
+    pipeNode(1,'');
+    setLoading(100);
+    setTimeout(() => setLoading(0), 1000);
+    btn.disabled = false; btn.innerHTML = '▶ RUN PIPELINE'; btn.classList.remove('running');
     isRunning = false;
     return;
   }
 
-  // Builder done
-  lastBuilderOutput = result.builder_output || '';
-  lastHackerReport = result.hacker_report || '';
-  setPipeNode('pipeBuilder', 'done');
-  setAgent('builder', 'complete', lastBuilderOutput.substring(0, 200));
-  setArrow('arr2', true);
-  log('Builder complete — code generated', 'builder');
+  // ── Builder complete ──
+  lastBuilder = result.builder_output || '';
+  lastHacker = result.hacker_report || '';
+  lastVerdict = result.final_verdict || 'ESCALATED';
 
-  // Hacker phase
-  setPipeNode('pipeHacker', 'active');
-  setAgent('hacker', 'running', 'Scanning for vulnerabilities...');
-  log('Hacker agent scanning...', 'hacker');
+  const cleanCode = lastBuilder.replace(/```[\w]*\n?/g,'').replace(/```/g,'').trim();
+
+  pipeNode(1,'done'); pipeArrow(1,true);
+  agentSet(0,'complete','Code generated successfully');
+  log('Builder complete — code generated (' + cleanCode.split('\n').length + ' lines)', 'builder');
+
+  // Show code in Monaco editor
+  if (monacoReady) {
+    initEditor(cleanCode, currentLang);
+    document.getElementById('edotGenerated').className = 'etab-dot modified';
+  }
+
+  // ── Hacker phase ──
+  pipeNode(2,'active');
+  agentSet(1,'running','Scanning for vulnerabilities...');
+  log('Hacker agent attacking the code...', 'hacker');
 
   // Parse findings
-  document.getElementById('findingsList').innerHTML = '';
-  const lines = lastHackerReport.split('\n');
-  for (const line of lines) {
-    const cweMatch = line.match(/CWE-(\d+)/i);
-    const cwe = cweMatch ? 'CWE-' + cweMatch[1] : 'CWE-000';
-    if (line.match(/CRITICAL/i)) addFinding('CRITICAL', cwe, line.replace(/.*CRITICAL[^:]*:?\s*/i,'').trim());
-    else if (line.match(/\bHIGH\b/i)) addFinding('HIGH', cwe, line.replace(/.*HIGH[^:]*:?\s*/i,'').trim());
-    else if (line.match(/MEDIUM/i)) addFinding('MEDIUM', cwe, line.replace(/.*MEDIUM[^:]*:?\s*/i,'').trim());
-    else if (line.match(/\bLOW\b/i)) addFinding('LOW', cwe, line.replace(/.*LOW[^:]*:?\s*/i,'').trim());
-  }
+  document.getElementById('flist').innerHTML = '';
+  lastHacker.split('\n').forEach(line => {
+    const m = line.match(/CWE-(\d+)/i);
+    const cwe = m ? 'CWE-'+m[1] : 'CWE-000';
+    if (/CRITICAL/i.test(line)) addFinding('CRITICAL', cwe, line.replace(/.*CRITICAL[^:]*:?\s*/i,'').trim());
+    else if (/\bHIGH\b/i.test(line)) addFinding('HIGH', cwe, line.replace(/.*HIGH[^:]*:?\s*/i,'').trim());
+    else if (/MEDIUM/i.test(line)) addFinding('MEDIUM', cwe, line.replace(/.*MEDIUM[^:]*:?\s*/i,'').trim());
+    else if (/\bLOW\b/i.test(line)) addFinding('LOW', cwe, line.replace(/.*LOW[^:]*:?\s*/i,'').trim());
+  });
   if (findings.length === 0) {
-    document.getElementById('findingsList').innerHTML = '<div class="findings-empty" style="color:var(--green)">✓ No vulnerabilities found</div>';
+    document.getElementById('flist').innerHTML = '<div class="fempty" style="color:var(--green)">✓ No vulnerabilities found</div>';
   }
 
-  setPipeNode('pipeHacker', 'done');
-  setAgent('hacker', 'complete', findings.length + ' findings: ' + lastHackerReport.substring(0, 150));
-  setArrow('arr3', true);
-  log('Hacker found ' + findings.length + ' issue(s)', findings.length > 0 ? 'warning' : 'success');
+  pipeNode(2,'done'); pipeArrow(2,true);
+  agentSet(1,'complete', findings.length + ' issue(s) found');
+  log('Hacker found ' + findings.length + ' vulnerability(s)', findings.length > 0 ? 'warning' : 'success');
 
-  // Auditor phase
-  setPipeNode('pipeAuditor', 'active');
-  setAgent('auditor', 'running', 'Reviewing security report...');
-  log('Auditor reviewing findings...', 'auditor');
-  await new Promise(r => setTimeout(r, 600));
+  // Switch to findings tab
+  switchRpTab(document.querySelectorAll('.rptab')[0], 'findings');
 
-  const verdict = result.final_verdict || 'ESCALATED';
-  const isApproved = verdict === 'APPROVED';
+  // ── Auditor phase ──
+  pipeNode(3,'active');
+  agentSet(2,'running','Reviewing security report...');
+  log('Auditor reviewing all findings...', 'auditor');
+  await new Promise(r => setTimeout(r, 400));
 
-  setPipeNode('pipeAuditor', 'done');
-  setAgent('auditor', 'complete', 'Verdict: ' + verdict + ' — ' + (result.auditor_verdict || '').substring(0, 100));
-  setArrow('arr4', true);
-  setPipeNode('pipeResult', 'done');
-  setIterDot(1, 'done');
-  log('Auditor verdict: ' + verdict, isApproved ? 'success' : 'warning');
+  const approved = lastVerdict === 'APPROVED';
+  pipeNode(3,'done'); pipeArrow(3,true); pipeNode(4,'done');
+  iterDot(1,'done');
+  agentSet(2,'complete','Verdict: ' + lastVerdict);
+  log('Verdict: ' + lastVerdict + (approved ? ' ✓ Safe to deploy' : ' ⚠ Needs fixes'), approved ? 'success' : 'warning');
 
-  // Stats
-  totalRuns++;
-  totalFindings += findings.length;
+  // ── Stats ──
+  totalRuns++; totalFindings += findings.length;
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  document.getElementById('statRuns').textContent = totalRuns;
-  document.getElementById('statFindings').textContent = totalFindings;
-  document.getElementById('statTime').textContent = elapsed + 's';
-  const sv = document.getElementById('statVerdict');
-  sv.textContent = verdict;
-  sv.style.color = isApproved ? 'var(--green)' : 'var(--red)';
+  document.getElementById('sRuns').textContent = totalRuns;
+  document.getElementById('sFindings').textContent = totalFindings;
+  document.getElementById('sTime').textContent = elapsed + 's';
+  const sv = document.getElementById('sVerdict');
+  sv.textContent = lastVerdict; sv.style.color = approved ? 'var(--green)' : 'var(--red)';
 
-  // Show results
-  const panel = document.getElementById('resultsPanel');
-  const banner = document.getElementById('verdictBanner');
-  const vtext = document.getElementById('verdictText');
-  const vmeta = document.getElementById('verdictMeta');
-  banner.className = 'verdict-banner ' + (isApproved ? 'approved' : 'escalated');
-  vtext.textContent = (isApproved ? '✅ ' : '⚠️ ') + verdict;
-  vmeta.textContent = findings.length + ' findings · ' + elapsed + 's · ' + currentLang + ' · via ' + (result.active_llm || 'groq');
-  
-  // Syntax highlight code
-  const code = lastBuilderOutput.replace(/```[\w]*\n?/g, '').replace(/```/g,'').trim();
-  const codeEl = document.getElementById('codeBlock');
-  codeEl.textContent = code;
-  codeEl.className = 'language-' + currentLang;
-  hljs.highlightElement(codeEl);
+  // ── Save to history ──
+  history.unshift({
+    request: req, language: currentLang, verdict: lastVerdict,
+    findings: findings.length, time: elapsed, code: cleanCode,
+    hacker: lastHacker, timestamp: new Date().toLocaleString()
+  });
 
-  panel.classList.add('show');
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // ── Build report tab ──
+  buildReport(req, elapsed, approved);
+  setLoading(100);
+  setTimeout(() => setLoading(0), 800);
   log('Pipeline complete in ' + elapsed + 's', 'success');
 
-  btn.disabled = false;
-  btn.innerHTML = '▶ RUN PIPELINE';
-  btn.classList.remove('running');
+  btn.disabled = false; btn.innerHTML = '▶ RUN PIPELINE'; btn.classList.remove('running');
   isRunning = false;
+}
+
+function buildReport(req, elapsed, approved) {
+  const html = `
+    <div class="report-section">
+      <div class="report-title">Verdict</div>
+      <div class="verdict-chip ${approved?'approved':'escalated'}">${approved?'✅':'⚠️'} ${lastVerdict}</div>
+    </div>
+    <div class="report-section">
+      <div class="report-title">Request</div>
+      <div class="report-value">${req}</div>
+    </div>
+    <div class="report-section">
+      <div class="report-title">Summary</div>
+      <div class="report-value">
+        Language: ${currentLang}<br>
+        Findings: ${findings.length}<br>
+        Run time: ${elapsed}s<br>
+        Model: ${document.getElementById('apiLabel').textContent}<br>
+        Date: ${new Date().toLocaleString()}
+      </div>
+    </div>
+    <div class="report-section">
+      <div class="report-title">Findings Breakdown</div>
+      <div class="report-value" style="font-family:var(--mono);font-size:12px">
+        CRITICAL: ${findings.filter(f=>f.sev==='CRITICAL').length}<br>
+        HIGH: ${findings.filter(f=>f.sev==='HIGH').length}<br>
+        MEDIUM: ${findings.filter(f=>f.sev==='MEDIUM').length}<br>
+        LOW: ${findings.filter(f=>f.sev==='LOW').length}
+      </div>
+    </div>
+    <button class="dl-btn" onclick="downloadReport()">⬇ Download Full Report (.txt)</button>
+    <button class="dl-btn" style="margin-top:6px;background:transparent;color:var(--cyan);border-color:rgba(6,182,212,0.3)" onclick="copyCode()">📋 Copy Generated Code</button>
+  `;
+  document.getElementById('reportContent').innerHTML = html;
 }
 
 function resetAll() {
   if (isRunning) return;
   document.getElementById('codeRequest').value = '';
-  document.getElementById('findingsList').innerHTML = '<div class="findings-empty">Run the pipeline to see security findings</div>';
-  document.getElementById('findingsCount').textContent = '0 findings';
-  document.getElementById('findingsCount').className = 'findings-count';
-  document.getElementById('resultsPanel').classList.remove('show');
-  document.getElementById('logWrap').innerHTML = '<span class="log-line log-info">[system] Reset complete</span><br>';
-  ['pipeUser','pipeBuilder','pipeHacker','pipeAuditor','pipeResult'].forEach(id => setPipeNode(id, ''));
-  ['arr1','arr2','arr3','arr4'].forEach(id => setArrow(id, false));
-  setAgent('builder','idle','Waiting for request...');
-  setAgent('hacker','idle','Waiting for code to analyze...');
-  setAgent('auditor','idle','Waiting for hacker report...');
-  [1,2,3].forEach(n => setIterDot(n, ''));
-  findings = [];
+  document.getElementById('flist').innerHTML = '<div class="fempty">Run the pipeline to see security findings</div>';
+  document.getElementById('fcount').textContent = '0 findings';
+  document.getElementById('fcount').className = 'fc';
+  document.getElementById('reportContent').innerHTML = '<div class="fempty">Run the pipeline to generate a report</div>';
+  clearLog();
+  [0,1,2,3,4].forEach(i => pipeNode(i,''));
+  [0,1,2,3].forEach(i => pipeArrow(i,false));
+  agentSet(0,'idle','Waiting...'); agentSet(1,'idle','Waiting...'); agentSet(2,'idle','Waiting...');
+  [1,2,3].forEach(n => iterDot(n,''));
+  findings = []; lastBuilder = ''; lastHacker = ''; lastVerdict = '';
+  setLoading(0);
+  if (monacoEditor) monacoEditor.setValue('// Your secure code will appear here after running the pipeline\n');
 }
 
 function copyCode() {
-  const code = document.getElementById('codeBlock').textContent;
+  const code = monacoEditor ? monacoEditor.getValue() : lastBuilder;
+  if (!code || code.includes('Your secure code will appear')) { log('No code to copy yet', 'warning'); return; }
   navigator.clipboard.writeText(code).then(() => {
-    const btn = event.target;
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => btn.textContent = '📋 Copy Code', 2000);
+    const b = document.getElementById('copyBtn');
+    b.textContent = '✓ Copied!'; b.style.color = 'var(--green)';
+    setTimeout(() => { b.textContent = '📋 Copy'; b.style.color = ''; }, 2000);
+    log('Code copied to clipboard', 'success');
   });
 }
 
+function formatCode() {
+  if (monacoEditor) {
+    monacoEditor.getAction('editor.action.formatDocument')?.run();
+    log('Code formatted', 'success');
+  }
+}
+
 function downloadReport() {
-  const verdict = document.getElementById('verdictText').textContent;
-  const code = document.getElementById('codeBlock').textContent;
-  const findingsList = findings.map(f => `[${f.sev}] ${f.cwe}: ${f.desc}`).join('\n');
+  if (!lastBuilder) { log('Run the pipeline first', 'warning'); return; }
+  const code = monacoEditor ? monacoEditor.getValue() : lastBuilder;
   const report = `SECURE AI CODING ASSISTANT — AUDIT REPORT
 ==========================================
 Date: ${new Date().toLocaleString()}
 Language: ${currentLang}
-Verdict: ${verdict}
-Run Time: ${document.getElementById('statTime').textContent}
+Verdict: ${lastVerdict}
 Findings: ${findings.length}
+Model: ${document.getElementById('apiLabel').textContent}
+
+FINDINGS BREAKDOWN
+------------------
+CRITICAL: ${findings.filter(f=>f.sev==='CRITICAL').length}
+HIGH: ${findings.filter(f=>f.sev==='HIGH').length}
+MEDIUM: ${findings.filter(f=>f.sev==='MEDIUM').length}
+LOW: ${findings.filter(f=>f.sev==='LOW').length}
 
 SECURITY FINDINGS
 -----------------
-${findingsList || 'No findings'}
+${findings.map(f=>`[${f.sev}] ${f.cwe}: ${f.desc}`).join('\n') || 'None found'}
 
-HACKER REPORT
--------------
-${lastHackerReport}
+HACKER ANALYSIS
+---------------
+${lastHacker}
 
 GENERATED CODE
 --------------
 ${code}
 
-Generated by Secure AI Coding Assistant
-Powered by Groq / Anthropic
+Generated by Secure AI Coding Assistant PRO
+Powered by Groq (llama-3.3-70b) / Anthropic (claude-3-5-sonnet)
 `;
   const a = document.createElement('a');
   a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(report);
   a.download = 'security-audit-' + Date.now() + '.txt';
   a.click();
+  log('Report downloaded', 'success');
 }
 
-// Check API health on load
-fetch(API + '/api/health').then(r => r.json()).then(d => {
-  const label = d.active_model || 'Groq · Llama 3.3 70B';
-  document.getElementById('apiLabel').textContent = label;
-  log('API connected: ' + label, 'success');
+// ── Health check ──
+fetch('/api/health').then(r => r.json()).then(d => {
+  document.getElementById('apiLabel').textContent = d.active_model || 'groq/llama-3.3-70b';
+  log('API connected: ' + (d.active_model || 'groq/llama-3.3-70b'), 'success');
+  log('Groq: ' + (d.groq ? '✓' : '✗') + '  Anthropic: ' + (d.anthropic ? '✓' : '✗'), 'info');
 }).catch(() => {
-  log('API offline — check Render deployment', 'error');
+  const p = document.getElementById('apiPill'); p.className = 'api-pill offline';
+  document.getElementById('apiDot').className = 'apidot offline';
   document.getElementById('apiLabel').textContent = 'API Offline';
-  document.querySelector('.api-dot').style.background = 'var(--red)';
+  log('API connection failed — check Render deployment', 'error');
 });
 </script>
 </body>
 </html>
 HTMLEOF
-echo "Done. Lines: $(wc -l < /tmp/dashboard_new.html)"
+echo "Done: $(wc -l < /mnt/user-data/outputs/dashboard.html) lines"
+Output
