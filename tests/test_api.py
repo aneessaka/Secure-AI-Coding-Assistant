@@ -72,6 +72,13 @@ class TestHealthEndpoint:
 
 
 class TestGitHubWebhook:
+    def test_get_returns_endpoint_info(self, client):
+        r = client.get("/api/github/webhook")
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data["status"] == "ok"
+        assert data["endpoint"] == "/api/github/webhook"
+
     def _signed_post(self, client, event, payload):
         body = json.dumps(payload).encode()
         sig = "sha256=" + __import__("hmac").new(

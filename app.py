@@ -264,6 +264,18 @@ def _run_pr_scan_async(payload: dict) -> None:
     thread.start()
 
 
+@app.route("/api/github/webhook", methods=["GET"])
+def github_webhook_status():
+    """Browser / health-check friendly — GitHub delivers events via POST."""
+    return jsonify({
+        "status": "ok",
+        "endpoint": "/api/github/webhook",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "github_bot_configured": bool(os.getenv("GITHUB_TOKEN")),
+        "message": "POST GitHub pull_request (or ping) events here.",
+    })
+
+
 @app.route("/api/github/webhook", methods=["POST"])
 def github_webhook():
     if not os.getenv("GITHUB_TOKEN"):
