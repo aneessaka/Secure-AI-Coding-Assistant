@@ -9,68 +9,19 @@ constraints on what tools it may access.
 from crewai import Agent, Task
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from typing import Type, Optional
+from typing import Type
 import sys
 import os
 
-# Allow imports from project root safely
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, ".."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# Allow imports from project root
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# Sub-folder paths inclusion for robust module alignment
-for folder in ["prompts", "tools", "config"]:
-    f_path = os.path.join(project_root, folder)
-    if f_path not in sys.path:
-        sys.path.insert(0, f_path)
-
-# Safe imports from relative sub-folders
-try:
-    from system_prompts import (
-        BUILDER_SYSTEM_PROMPT,
-        HACKER_SYSTEM_PROMPT,
-        AUDITOR_SYSTEM_PROMPT,
-    )
-except ModuleNotFoundError:
-    # Reliable fallback values if system_prompts is missing
-    BUILDER_SYSTEM_PROMPT = "You are The Builder — a Senior Software Engineer. Write secure code."
-    HACKER_SYSTEM_PROMPT = "You are ADVERSARY-1 — a Red Team Hacker. Find high-severity vulnerabilities."
-    AUDITOR_SYSTEM_PROMPT = "You are the Security Auditor. Run analysis and issue APPROVED or REJECTED status."
-
-try:
-    from static_analysis import run_all_tools
-except ModuleNotFoundError:
-    # Inline heuristic mock scanner if static_analysis engine import fails
-    def run_all_tools(code: str, language: str = "python", mock: bool = True) -> str:
-        import ast
-        findings = []
-        try:
-            tree = ast.parse(code)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in ['eval', 'exec']:
-                    findings.append(f"CRITICAL: Dangerous invocation of dynamic language feature: {node.func.id}()")
-        except Exception as e:
-            return f"Static analysis execution error: {str(e)}"
-        if findings:
-            return "--- Automated Analysis Report ---\nStatus: FAIL\n" + "\n".join(findings)
-        return "--- Automated Analysis Report ---\nStatus: PASS\nNo obvious dynamic syntax vulnerabilities found."
-
-# Security utilities for input validation
-try:
-    from security_utils import validate_request_length, validate_remediation_brief, escape_for_template
-except ModuleNotFoundError:
-    # Fallback implementations if security_utils is missing
-    def validate_request_length(text: str, max_length: int = 5000) -> None:
-        if len(text) > max_length:
-            raise ValueError(f"Input exceeds {max_length} characters")
-    
-    def validate_remediation_brief(text: str, max_length: int = 10000) -> None:
-        if len(text) > max_length:
-            raise ValueError(f"Input exceeds {max_length} characters")
-    
-    def escape_for_template(text: str) -> str:
-        return text.replace("```", "`​`​`")
+from prompts.system_prompts import (
+    BUILDER_SYSTEM_PROMPT,
+    HACKER_SYSTEM_PROMPT,
+    AUDITOR_SYSTEM_PROMPT,
+)
+from tools.static_analysis import run_all_tools
 
 
 # ---------------------------------------------------------------------------
@@ -139,10 +90,10 @@ def create_builder_agent(llm) -> Agent:
         ),
         backstory=BUILDER_SYSTEM_PROMPT,
         llm=llm,
-        tools=[],
+        tools=[],  # Builder has no tools — pure code generation
         verbose=True,
         allow_delegation=False,
-        max_iter=1,
+        max_iter=1,  # One shot per loop iteration
     )
 
 
@@ -161,7 +112,7 @@ def create_hacker_agent(llm) -> Agent:
         ),
         backstory=HACKER_SYSTEM_PROMPT,
         llm=llm,
-        tools=[],
+        tools=[],  # Hacker uses only LLM reasoning — no external tool access
         verbose=True,
         allow_delegation=False,
         max_iter=1,
@@ -197,7 +148,7 @@ def create_auditor_agent(llm) -> Agent:
 # Task Factory Functions
 # ---------------------------------------------------------------------------
 
-def create_build_task(agent: Agent, user_request: str, language: str, iteration: int = 1,
+def create_build_task(agent: Agent, user_request: str, iteration: int,
                       remediation_brief: str = "") -> Task:
     """
     Create the Builder's coding task.
@@ -205,34 +156,15 @@ def create_build_task(agent: Agent, user_request: str, language: str, iteration:
     Args:
         agent: The Builder agent.
         user_request: The original user's code request.
-        language: Programming language targeted.
         iteration: Current loop iteration (1-3).
         remediation_brief: If iteration > 1, the Auditor's fix instructions.
-        
-    Raises:
-        ValueError: If inputs exceed maximum safe lengths.
-    
-    Returns:
-        A Task configured for the Builder agent.
     """
-    # SECURITY: Validate input lengths to prevent token exhaustion
-    try:
-        validate_request_length(user_request, max_length=5000)
-        if remediation_brief:
-            validate_remediation_brief(remediation_brief, max_length=10000)
-    except ValueError as e:
-        raise ValueError(f"Task validation failed: {str(e)}")
-    
-    # SECURITY: Escape user input to prevent prompt injection via template
-    safe_user_request = escape_for_template(user_request)
-    safe_remediation = escape_for_template(remediation_brief) if remediation_brief else ""
-    
     if iteration == 1:
         description = f"""
 Generate secure, production-ready code for the following request:
 
 ## USER REQUEST:
-{safe_user_request}
+{user_request}
 
 ## INSTRUCTIONS:
 - Follow your system prompt defaults (prefer Rust, use secure libraries).
@@ -245,10 +177,10 @@ Generate secure, production-ready code for the following request:
 Revise your previously generated code based on the Security Auditor's Remediation Brief.
 
 ## ORIGINAL USER REQUEST:
-{safe_user_request}
+{user_request}
 
 ## SECURITY AUDITOR'S REMEDIATION BRIEF (Iteration {iteration - 1}):
-{safe_remediation}
+{remediation_brief}
 
 ## INSTRUCTIONS:
 - You MUST address EVERY mandatory fix in the Remediation Brief.
@@ -271,7 +203,7 @@ Revise your previously generated code based on the Security Auditor's Remediatio
     )
 
 
-def create_attack_task(agent: Agent, builder_output: str, iteration: int = 1) -> Task:
+def create_attack_task(agent: Agent, builder_output: str, iteration: int) -> Task:
     """
     Create the Red Team Hacker's attack review task.
 
@@ -279,19 +211,13 @@ def create_attack_task(agent: Agent, builder_output: str, iteration: int = 1) ->
         agent: The Hacker agent.
         builder_output: The Builder's generated code (full response).
         iteration: Current loop iteration.
-        
-    Returns:
-        A Task configured for the Hacker agent.
     """
-    # SECURITY: Escape builder output to prevent prompt injection
-    safe_builder_output = escape_for_template(builder_output)
-    
     return Task(
         description=f"""
 Perform an exhaustive security review of the following code. This is iteration {iteration} of 3.
 
 ## CODE UNDER REVIEW:
-{safe_builder_output}
+{builder_output}
 
 ## INSTRUCTIONS:
 - Execute your full attack methodology: check ALL Tier 1, Tier 2, and Tier 3 categories.
@@ -313,7 +239,7 @@ Perform an exhaustive security review of the following code. This is iteration {
 
 
 def create_audit_task(agent: Agent, builder_output: str, hacker_report: str,
-                      iteration: int = 1, language: str = "python") -> Task:
+                      iteration: int, language: str = "python") -> Task:
     """
     Create the Security Auditor's verdict task.
 
@@ -342,55 +268,61 @@ Issue your security verdict for iteration {iteration} of 3.
    - code: [extract the code block from the Builder's output]
    - language: "{language}"
    - mock: true
-
+   
    Here is the extracted code for the tool call:
    ```
    {code_for_analysis}
    ```
 
-2. Based on BOTH the Red Team Report AND the tool output, issue your verdict:
-   - APPROVED: Code has NO high/critical issues and passes automated analysis
-   - ESCALATED: Code has critical/high issues OR fails automated analysis
+2. After receiving tool results, synthesize:
+   - The Red Team findings
+   - The static analysis tool findings
+   
+3. Apply your decision framework:
+   - AUTOMATIC REJECTION triggers? → REJECT immediately
+   - RED TEAM verdict? → Weight accordingly
+   - Tool findings → Cross-reference with Red Team
 
-3. If ESCALATED, provide a Remediation Brief with specific fix instructions.
+4. Output either:
+   - REJECTED: Full Remediation Brief (if iteration < 3)
+   - REJECTED + ESCALATION: If iteration 3 still has CRITICAL issues
+   - APPROVED: Approval Certificate
 
-## FORMAT REQUIREMENTS:
-- Start with: Verdict: [APPROVED | ESCALATED]
-- Follow with findings summary and remediation (if applicable)
-- Be concise, clinical, and precise
+## CRITICAL: 
+You MUST call StaticAnalysisTool before issuing your verdict.
+You MUST use the exact output format from your system prompt.
 """,
         expected_output=(
-            "A final security verdict containing:\n"
-            "1. Clear Verdict: [APPROVED | ESCALATED]\n"
-            "2. Summary of findings from both Red Team Report and Static Analysis\n"
-            "3. If ESCALATED: a Remediation Brief with mandatory fixes\n"
-            "4. Risk assessment and confidence level\n"
-            "The verdict must be definitive and actionable."
+            "One of two structured outputs:\n"
+            "OPTION A — REJECTED: 'SECURITY AUDITOR — REMEDIATION BRIEF' with:\n"
+            "  - Status: REJECTED\n"
+            "  - Numbered mandatory fixes with root cause, required fix, acceptance criteria\n"
+            "  - Recommendations section\n"
+            "  - Static Analysis Tool Output section\n"
+            "  - Iteration count and next action\n"
+            "OPTION B — APPROVED: 'SECURITY AUDITOR — APPROVAL CERTIFICATE' with:\n"
+            "  - Status: APPROVED\n"
+            "  - Red Team and Static Analysis confirmation\n"
+            "  - Summary and caveats\n"
         ),
         agent=agent,
     )
 
 
-# ---------------------------------------------------------------------------
-# Utility Functions
-# ---------------------------------------------------------------------------
-
 def _extract_code_block(text: str) -> str:
     """
-    Extract the largest code block from text.
-    Looks for ```<language> code ``` markers and extracts the longest one.
-    Fallback: if no code blocks found, return original text (up to 500 chars).
+    Best-effort extraction of a code block from agent output.
+    Looks for ``` fences and returns the largest block.
+    Falls back to the full text if no fences found.
     """
     import re
-
-    # Find all code blocks (with or without language specifier)
-    pattern = r'```(?:python|rust|js|javascript|java|cpp|c|go|ruby)?\s*\n(.*?)\n```'
+    # Match fenced code blocks (with or without language specifier)
+    pattern = r"```(?:\w+)?\n(.*?)```"
     matches = re.findall(pattern, text, re.DOTALL)
 
-    if not matches:
-        # No code blocks found - return original text as fallback
-        return text if len(text) <= 500 else text[:500]
+    if matches:
+        # Return the longest code block (usually the main implementation)
+        return max(matches, key=len).strip()
 
-    # Return the longest code block
-    longest = max(matches, key=len)
-    return longest.strip()
+    # Fallback: return the full text (Auditor will handle it)
+    return text

@@ -1,875 +1,815 @@
-﻿cat > /mnt/user-data/outputs/dashboard.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Secure AI Coding Assistant — Pro</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<!-- Monaco Editor -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#07090f;--bg2:#0c1018;--bg3:#111827;--card:#0e1422;
-  --border:#1a2740;--border2:#243550;
-  --green:#00e87a;--green2:#00b85e;--green3:rgba(0,232,122,0.08);
-  --red:#ff4060;--red2:rgba(255,64,96,0.08);
-  --amber:#ffb020;--amber2:rgba(255,176,32,0.08);
-  --blue:#3b82f6;--cyan:#06b6d4;--purple:#a855f7;
-  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
-  --font:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
-  --radius:12px;--radius2:8px;
-}
-html,body{height:100%;overflow:hidden}
-body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;flex-direction:column}
-body::before{content:'';position:fixed;inset:0;
-  background:radial-gradient(ellipse 60% 40% at 20% 0%,rgba(0,232,122,0.05),transparent),
-             radial-gradient(ellipse 50% 40% at 80% 100%,rgba(59,130,246,0.04),transparent);
-  pointer-events:none;z-index:0}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Secure AI Coding Assistant — Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-/* ── TOP BAR ── */
-.topbar{display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;height:52px;background:var(--card);
-  border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:10}
-.logo{display:flex;align-items:center;gap:10px}
-.logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--green),var(--cyan));
-  border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
-.logo-text{font-size:15px;font-weight:700;letter-spacing:-0.3px}
-.logo-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;
-  background:rgba(0,232,122,0.12);border:1px solid rgba(0,232,122,0.2);color:var(--green);margin-left:4px}
-.topbar-center{display:flex;align-items:center;gap:8px}
-.tab{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;
-  color:var(--text3);border:none;background:transparent;transition:all 0.2s;font-family:var(--font)}
-.tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
-.tab.active{color:var(--text);background:rgba(255,255,255,0.07)}
-.topbar-right{display:flex;align-items:center;gap:10px}
-.api-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;
-  background:var(--green3);border:1px solid rgba(0,232,122,0.15);
-  border-radius:20px;font-size:12px;font-weight:500;color:var(--green)}
-.api-pill.offline{background:var(--red2);border-color:rgba(255,64,96,0.2);color:var(--red)}
-.apidot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
-.apidot.offline{background:var(--red);animation:none}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-darker: #050508;
+            --bg-card: rgba(15, 15, 25, 0.7);
+            --green: #00ff88;
+            --green-dark: #00cc66;
+            --red: #ff3366;
+            --amber: #ffaa00;
+            --white: #f0f0f0;
+            --gray: #808080;
+            --gray-light: #a0a0a0;
+            --border-color: rgba(0, 255, 136, 0.1);
+            --shadow: 0 8px 32px rgba(0, 255, 136, 0.1);
+        }
 
-/* ── MAIN LAYOUT ── */
-.app{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
+        body {
+            background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+            color: var(--white);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-/* ── LEFT SIDEBAR ── */
-.sidebar{width:300px;flex-shrink:0;background:var(--card);
-  border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.sidebar-inner{flex:1;overflow-y:auto;padding:16px}
-.sidebar-inner::-webkit-scrollbar{width:4px}
-.sidebar-inner::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-.s-section{margin-bottom:20px}
-.s-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
-  color:var(--text3);margin-bottom:10px;display:block}
-textarea#codeRequest{width:100%;background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--radius2);padding:12px;color:var(--text);font-family:var(--font);
-  font-size:13px;resize:none;height:100px;outline:none;transition:border-color 0.2s;line-height:1.5}
-textarea#codeRequest:focus{border-color:rgba(0,232,122,0.4)}
-textarea#codeRequest::placeholder{color:var(--text3)}
-.lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.lb{padding:8px;border:1px solid var(--border);border-radius:var(--radius2);
-  background:var(--bg2);color:var(--text3);font-family:var(--font);font-size:12px;
-  font-weight:500;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;
-  justify-content:center;gap:6px}
-.lb:hover{border-color:var(--border2);color:var(--text)}
-.lb.active{border-color:var(--green);background:var(--green3);color:var(--green)}
-.btn-run{width:100%;padding:12px;border:none;border-radius:var(--radius2);
-  background:linear-gradient(135deg,var(--green),var(--green2));
-  color:#000;font-family:var(--font);font-size:14px;font-weight:700;
-  cursor:pointer;transition:all 0.2s;letter-spacing:0.2px;margin-bottom:8px}
-.btn-run:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,232,122,0.25)}
-.btn-run:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-.btn-run.running{background:linear-gradient(135deg,var(--amber),#d4890a);animation:rp 1.5s infinite}
-@keyframes rp{0%,100%{box-shadow:0 0 0 0 rgba(255,176,32,0.3)}50%{box-shadow:0 0 0 8px rgba(255,176,32,0)}}
-.btn-sec{width:100%;padding:9px;border:1px solid var(--border);border-radius:var(--radius2);
-  background:transparent;color:var(--text3);font-family:var(--font);font-size:13px;cursor:pointer;transition:all 0.2s}
-.btn-sec:hover{border-color:var(--red);color:var(--red)}
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-/* Agent status in sidebar */
-.agent-row{display:flex;align-items:center;gap:10px;padding:10px 12px;
-  border-radius:var(--radius2);background:var(--bg2);border:1px solid var(--border);
-  margin-bottom:6px;transition:border-color 0.3s}
-.agent-row.running{border-color:var(--amber)}
-.agent-row.done{border-color:rgba(0,232,122,0.3)}
-.agent-icon{font-size:18px;flex-shrink:0}
-.agent-info{flex:1;min-width:0}
-.agent-name{font-size:12px;font-weight:600}
-.agent-sub{font-size:11px;color:var(--text3);font-family:var(--mono);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.abadge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;
-  text-transform:uppercase;letter-spacing:0.5px;flex-shrink:0}
-.ab-idle{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
-.ab-running{background:var(--amber2);color:var(--amber);border:1px solid rgba(255,176,32,0.3)}
-.ab-complete{background:var(--green3);color:var(--green);border:1px solid rgba(0,232,122,0.2)}
-.ab-error{background:var(--red2);color:var(--red);border:1px solid rgba(255,64,96,0.2)}
+        /* Header */
+        .header {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
 
-/* Pipeline mini viz */
-.mini-pipe{display:flex;align-items:center;justify-content:space-between;
-  padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);margin-bottom:6px}
-.mpn{display:flex;flex-direction:column;align-items:center;gap:4px}
-.mpicon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;
-  justify-content:center;font-size:14px;border:1px solid var(--border);background:var(--bg3);
-  transition:all 0.4s;position:relative}
-.mpicon.active{border-color:var(--amber);background:var(--amber2);animation:mg 1s infinite}
-.mpicon.done{border-color:var(--green);background:var(--green3)}
-.mpicon.done::after{content:'✓';position:absolute;top:-5px;right:-5px;width:14px;height:14px;
-  background:var(--green);border-radius:50%;font-size:8px;display:flex;align-items:center;
-  justify-content:center;color:#000;font-weight:700}
-@keyframes mg{0%,100%{box-shadow:0 0 0 0 rgba(255,176,32,0.4)}50%{box-shadow:0 0 0 6px rgba(255,176,32,0)}}
-.mplbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
-.mparr{color:var(--border);font-size:12px;transition:color 0.3s}
-.mparr.lit{color:var(--green)}
+        .header-left h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--green), var(--white));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-/* Stats in sidebar */
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);
-  padding:10px;text-align:center}
-.stat-val{font-size:18px;font-weight:700;font-family:var(--mono)}
-.stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:0.3px}
+        .header-left p {
+            color: var(--gray-light);
+            font-size: 14px;
+        }
 
-/* Iter dots */
-.iter-row{display:flex;align-items:center;gap:6px}
-.idot{width:24px;height:24px;border-radius:50%;border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;
-  color:var(--text3);background:var(--bg2);transition:all 0.3s;flex-shrink:0}
-.idot.active{border-color:var(--amber);color:var(--amber);background:var(--amber2)}
-.idot.done{border-color:var(--green);color:var(--green);background:var(--green3)}
-.iline{flex:1;height:1px;background:var(--border)}
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-/* ── CENTER: EDITOR ── */
-.editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.editor-topbar{display:flex;align-items:center;justify-content:space-between;
-  padding:0 16px;height:40px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
-.editor-tabs{display:flex;align-items:center;gap:2px}
-.etab{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:4px;
-  font-size:12px;font-weight:500;cursor:pointer;color:var(--text3);
-  border:none;background:transparent;transition:all 0.2s;font-family:var(--mono)}
-.etab:hover{color:var(--text)}
-.etab.active{background:var(--bg3);color:var(--text);border-bottom:2px solid var(--green)}
-.etab-dot{width:8px;height:8px;border-radius:50%;background:var(--border2)}
-.etab-dot.modified{background:var(--amber)}
-.editor-actions{display:flex;align-items:center;gap:8px}
-.ea-btn{padding:5px 12px;border-radius:6px;font-family:var(--font);font-size:12px;
-  font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid var(--border);
-  background:transparent;color:var(--text2)}
-.ea-btn:hover{border-color:var(--green);color:var(--green)}
-.ea-btn.primary{background:var(--green3);border-color:rgba(0,232,122,0.3);color:var(--green)}
-#monacoContainer{flex:1;overflow:hidden}
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
 
-/* Editor placeholder */
-.editor-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:16px;color:var(--text3)}
-.ep-icon{font-size:48px;opacity:0.3}
-.ep-title{font-size:16px;font-weight:500;color:var(--text2)}
-.ep-sub{font-size:13px;text-align:center;max-width:300px;line-height:1.6}
+        .status-dot.idle {
+            background: var(--gray);
+            animation: none;
+        }
 
-/* Loading bar */
-.loading-bar{height:2px;background:var(--border);position:relative;overflow:hidden;flex-shrink:0}
-.loading-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));
-  width:0%;transition:width 0.5s ease;border-radius:2px}
-.loading-fill.indeterminate{width:40%;animation:slide 1.5s infinite}
-@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+        .status-dot.error {
+            background: var(--red);
+            animation: pulse-red 1s infinite;
+        }
 
-/* ── RIGHT PANEL ── */
-.right-panel{width:320px;flex-shrink:0;background:var(--card);
-  border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.rp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.rptab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;
-  cursor:pointer;color:var(--text3);border:none;background:transparent;
-  border-bottom:2px solid transparent;transition:all 0.2s;font-family:var(--font)}
-.rptab.active{color:var(--text);border-bottom-color:var(--green)}
-.rptab:hover{color:var(--text2)}
-.rp-content{flex:1;overflow-y:auto;padding:14px}
-.rp-content::-webkit-scrollbar{width:4px}
-.rp-content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
 
-/* Findings */
-.fheader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.fc{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;
-  background:var(--bg2);border:1px solid var(--border);color:var(--text3)}
-.fc.has{background:var(--red2);border-color:rgba(255,64,96,0.25);color:var(--red)}
-.finding{display:flex;gap:8px;align-items:flex-start;padding:10px;border-radius:var(--radius2);
-  background:var(--bg2);border:1px solid var(--border);margin-bottom:8px;animation:fin 0.3s ease}
-@keyframes fin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.sb{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;flex-shrink:0;margin-top:2px}
-.s-CRITICAL{background:rgba(255,64,96,0.2);color:var(--red);border:1px solid rgba(255,64,96,0.3)}
-.s-HIGH{background:rgba(249,115,22,0.2);color:#f97316;border:1px solid rgba(249,115,22,0.3)}
-.s-MEDIUM{background:var(--amber2);color:var(--amber);border:1px solid rgba(255,176,32,0.3)}
-.s-LOW{background:rgba(59,130,246,0.15);color:var(--blue);border:1px solid rgba(59,130,246,0.3)}
-.fdesc{font-size:12px;color:var(--text);line-height:1.4}
-.fcwe{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
-.fempty{text-align:center;padding:32px 0;color:var(--text3);font-size:13px}
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
 
-/* Terminal */
-.terminal{background:var(--bg);border-radius:var(--radius2);
-  height:100%;overflow-y:auto;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.8}
-.terminal::-webkit-scrollbar{width:4px}
-.terminal::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-.tl{display:block}
-.t-info{color:var(--text3)}.t-success{color:var(--green)}.t-warning{color:var(--amber)}
-.t-error{color:var(--red)}.t-builder{color:var(--cyan)}.t-hacker{color:var(--purple)}.t-auditor{color:var(--blue)}
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
 
-/* Report tab */
-.report-section{margin-bottom:16px}
-.report-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
-  color:var(--text3);margin-bottom:8px}
-.report-value{font-size:13px;color:var(--text);line-height:1.5}
-.verdict-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;
-  border-radius:20px;font-size:14px;font-weight:700}
-.verdict-chip.approved{background:var(--green3);border:1px solid rgba(0,232,122,0.25);color:var(--green)}
-.verdict-chip.escalated{background:var(--red2);border:1px solid rgba(255,64,96,0.25);color:var(--red)}
-.dl-btn{width:100%;padding:10px;border-radius:var(--radius2);font-family:var(--font);
-  font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;
-  border:1px solid rgba(0,232,122,0.3);background:var(--green3);color:var(--green);margin-top:8px}
-.dl-btn:hover{background:rgba(0,232,122,0.15)}
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
 
-/* Spinner */
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,0.2);
-  border-top-color:#000;border-radius:50%;animation:spin 0.8s linear infinite;
-  vertical-align:middle;margin-right:6px}
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
 
-/* Scrollbar global */
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+        .card:hover {
+            border-color: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.2);
+        }
 
-@media(max-width:1000px){
-  .sidebar{width:260px}
-  .right-panel{width:280px}
-}
-</style>
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--green);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-subtitle {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 8px;
+        }
+
+        /* Pipeline Visualizer */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .pipeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--green), transparent);
+            z-index: 0;
+        }
+
+        .pipeline-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stage-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .stage-icon.active {
+            border-color: var(--green);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            animation: pulse 1s infinite;
+        }
+
+        .stage-label {
+            font-size: 12px;
+            color: var(--gray-light);
+            text-align: center;
+            max-width: 60px;
+        }
+
+        /* Agent Status Cards */
+        .agent-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .agent-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--green);
+            margin-bottom: 8px;
+        }
+
+        .agent-role {
+            font-size: 12px;
+            color: var(--gray);
+            margin-bottom: 12px;
+        }
+
+        .agent-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .agent-status.running {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--green);
+        }
+
+        .agent-status.idle {
+            background: rgba(128, 128, 128, 0.2);
+            color: var(--gray-light);
+        }
+
+        .agent-status.complete {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--green);
+        }
+
+        .agent-output {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--green);
+            max-height: 120px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+
+        /* Security Findings */
+        .findings-panel {
+            grid-column: 1 / -1;
+        }
+
+        .finding-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--green);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .finding-item:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .severity-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .severity-critical {
+            background: rgba(255, 51, 102, 0.3);
+            color: var(--red);
+            border-left-color: var(--red);
+        }
+
+        .severity-high {
+            background: rgba(255, 170, 0, 0.3);
+            color: var(--amber);
+            border-left-color: var(--amber);
+        }
+
+        .severity-medium {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--green);
+            border-left-color: var(--green);
+        }
+
+        .severity-low {
+            background: rgba(128, 128, 128, 0.2);
+            color: var(--gray-light);
+            border-left-color: var(--gray-light);
+        }
+
+        .finding-text {
+            flex-grow: 1;
+        }
+
+        .finding-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .finding-cwe {
+            font-size: 10px;
+            color: var(--gray);
+        }
+
+        /* Iteration Tracker */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--green-dark));
+            width: 33%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .iteration-label {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* Output Log */
+        .log-container {
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            grid-column: 1 / -1;
+        }
+
+        .log-line {
+            margin-bottom: 6px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .log-line:hover {
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .log-builder { color: #00ff88; }
+        .log-hacker { color: #ff3366; }
+        .log-auditor { color: #ffaa00; }
+        .log-info { color: var(--gray-light); }
+        .log-error { color: var(--red); }
+        .log-success { color: var(--green); }
+
+        /* Results Section */
+        .results {
+            grid-column: 1 / -1;
+        }
+
+        .verdict {
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .verdict.approved {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 200, 100, 0.2));
+            border: 2px solid var(--green);
+            color: var(--green);
+        }
+
+        .verdict.escalated {
+            background: linear-gradient(135deg, rgba(255, 51, 102, 0.2), rgba(255, 0, 50, 0.2));
+            border: 2px solid var(--red);
+            color: var(--red);
+        }
+
+        .code-block {
+            background: var(--bg-darker);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            color: var(--green);
+        }
+
+        .code-keyword { color: var(--amber); }
+        .code-string { color: #88ff00; }
+        .code-comment { color: var(--gray); }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: var(--green);
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:hover {
+            background: var(--green-dark);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .pipeline {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 20px;
+            }
+
+            .pipeline::before {
+                display: none;
+            }
+
+            .log-container {
+                height: 200px;
+            }
+
+            .code-block {
+                max-height: 300px;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--green);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--green-dark);
+        }
+    </style>
 </head>
 <body>
-
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="logo">
-    <div class="logo-icon">🔐</div>
-    <span class="logo-text">Secure AI Coding Assistant</span>
-    <span class="logo-badge">PRO</span>
-  </div>
-  <div class="topbar-center">
-    <button class="tab active" onclick="switchTab(this,'editor')">Editor</button>
-    <button class="tab" onclick="switchTab(this,'history')">History</button>
-    <button class="tab" onclick="switchTab(this,'docs')">Docs</button>
-  </div>
-  <div class="topbar-right">
-    <div class="api-pill" id="apiPill">
-      <div class="apidot" id="apiDot"></div>
-      <span id="apiLabel">Connecting...</span>
-    </div>
-  </div>
-</div>
-
-<!-- MAIN APP -->
-<div class="app">
-
-  <!-- LEFT SIDEBAR -->
-  <div class="sidebar">
-    <div class="sidebar-inner">
-
-      <!-- Request -->
-      <div class="s-section">
-        <span class="s-label">Your Request</span>
-        <textarea id="codeRequest" placeholder="e.g. Build a secure JWT authentication system with refresh tokens, rate limiting, and session management..."></textarea>
-      </div>
-
-      <!-- Language -->
-      <div class="s-section">
-        <span class="s-label">Language</span>
-        <div class="lang-grid">
-          <button class="lb active" onclick="setLang(this,'python')">🐍 Python</button>
-          <button class="lb" onclick="setLang(this,'javascript')">🌐 JavaScript</button>
-          <button class="lb" onclick="setLang(this,'go')">🔵 Go</button>
-          <button class="lb" onclick="setLang(this,'rust')">🦀 Rust</button>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <h1>🔐 Secure AI Coding Assistant</h1>
+                <p>Multi-Agent Security Pipeline</p>
+            </div>
+            <div class="status-indicator">
+                <div id="statusDot" class="status-dot"></div>
+                <span id="statusText">Ready</span>
+            </div>
         </div>
-      </div>
 
-      <!-- Run -->
-      <div class="s-section">
-        <button class="btn-run" id="runBtn" onclick="runPipeline()">▶ RUN PIPELINE</button>
-        <button class="btn-sec" onclick="resetAll()">↺ Reset Everything</button>
-      </div>
-
-      <!-- Pipeline viz -->
-      <div class="s-section">
-        <span class="s-label">Pipeline</span>
-        <div class="mini-pipe">
-          <div class="mpn"><div class="mpicon" id="pn0">📝</div><div class="mplbl">User</div></div>
-          <div class="mparr" id="pa0">›</div>
-          <div class="mpn"><div class="mpicon" id="pn1">🔨</div><div class="mplbl">Build</div></div>
-          <div class="mparr" id="pa1">›</div>
-          <div class="mpn"><div class="mpicon" id="pn2">💀</div><div class="mplbl">Hack</div></div>
-          <div class="mparr" id="pa2">›</div>
-          <div class="mpn"><div class="mpicon" id="pn3">⚖️</div><div class="mplbl">Audit</div></div>
-          <div class="mparr" id="pa3">›</div>
-          <div class="mpn"><div class="mpicon" id="pn4">🎯</div><div class="mplbl">Done</div></div>
+        <!-- Pipeline Visualizer -->
+        <div class="card" style="margin-bottom: 30px;">
+            <div class="card-title">Pipeline Flow</div>
+            <div class="pipeline">
+                <div class="pipeline-stage">
+                    <div class="stage-icon" id="stage-input">📝</div>
+                    <div class="stage-label">Input</div>
+                </div>
+                <div class="pipeline-stage">
+                    <div class="stage-icon" id="stage-builder">🔨</div>
+                    <div class="stage-label">Builder</div>
+                </div>
+                <div class="pipeline-stage">
+                    <div class="stage-icon" id="stage-hacker">💀</div>
+                    <div class="stage-label">Red Team</div>
+                </div>
+                <div class="pipeline-stage">
+                    <div class="stage-icon" id="stage-auditor">⚖️</div>
+                    <div class="stage-label">Auditor</div>
+                </div>
+                <div class="pipeline-stage">
+                    <div class="stage-icon" id="stage-result">🎯</div>
+                    <div class="stage-label">Result</div>
+                </div>
+            </div>
         </div>
-      </div>
 
-      <!-- Agents -->
-      <div class="s-section">
-        <span class="s-label">Agents</span>
-        <div class="agent-row" id="ar0">
-          <div class="agent-icon">🔨</div>
-          <div class="agent-info">
-            <div class="agent-name">Builder</div>
-            <div class="agent-sub" id="ao0">Waiting...</div>
-          </div>
-          <div class="abadge ab-idle" id="ab0">IDLE</div>
+        <!-- Agent Status Cards -->
+        <div class="grid-3">
+            <div class="agent-card">
+                <div class="agent-name">The Builder</div>
+                <div class="agent-role">Senior Software Engineer</div>
+                <div class="agent-status idle" id="builder-status">Idle</div>
+                <div class="agent-output" id="builder-output">Waiting for input...</div>
+            </div>
+
+            <div class="agent-card">
+                <div class="agent-name">Red Team Hacker</div>
+                <div class="agent-role">ADVERSARY-1</div>
+                <div class="agent-status idle" id="hacker-status">Idle</div>
+                <div class="agent-output" id="hacker-output">Waiting for code...</div>
+            </div>
+
+            <div class="agent-card">
+                <div class="agent-name">Security Auditor</div>
+                <div class="agent-role">Compliance Officer</div>
+                <div class="agent-status idle" id="auditor-status">Idle</div>
+                <div class="agent-output" id="auditor-output">Waiting for review...</div>
+            </div>
         </div>
-        <div class="agent-row" id="ar1">
-          <div class="agent-icon">💀</div>
-          <div class="agent-info">
-            <div class="agent-name">Red Team Hacker</div>
-            <div class="agent-sub" id="ao1">Waiting...</div>
-          </div>
-          <div class="abadge ab-idle" id="ab1">IDLE</div>
+
+        <!-- Iteration Tracker -->
+        <div class="card">
+            <div class="card-title">Iteration Progress</div>
+            <div style="text-align: center; font-size: 18px; font-weight: 600; margin-bottom: 12px;">
+                <span id="iteration-current">1</span> / <span id="iteration-max">3</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 33%;"></div>
+            </div>
+            <div class="iteration-label" id="iteration-label">Iteration 1 of 3</div>
         </div>
-        <div class="agent-row" id="ar2">
-          <div class="agent-icon">⚖️</div>
-          <div class="agent-info">
-            <div class="agent-name">Security Auditor</div>
-            <div class="agent-sub" id="ao2">Waiting...</div>
-          </div>
-          <div class="abadge ab-idle" id="ab2">IDLE</div>
+
+        <!-- Security Findings Panel -->
+        <div class="card findings-panel">
+            <div class="card-title">🔍 Security Findings</div>
+            <div id="findings-list">
+                <div class="finding-item">
+                    <div class="severity-badge severity-high">High</div>
+                    <div class="finding-text">
+                        <div class="finding-title">SQL Injection Risk</div>
+                        <div class="finding-cwe">CWE-89: SQL Injection</div>
+                    </div>
+                </div>
+                <div class="finding-item">
+                    <div class="severity-badge severity-medium">Medium</div>
+                    <div class="finding-text">
+                        <div class="finding-title">Missing Input Validation</div>
+                        <div class="finding-cwe">CWE-20: Improper Input Validation</div>
+                    </div>
+                </div>
+                <div class="finding-item">
+                    <div class="severity-badge severity-low">Low</div>
+                    <div class="finding-text">
+                        <div class="finding-title">Hardcoded Configuration</div>
+                        <div class="finding-cwe">CWE-798: Use of Hard-coded Credentials</div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
 
-      <!-- Iteration -->
-      <div class="s-section">
-        <span class="s-label">Iteration Progress</span>
-        <div class="iter-row">
-          <div class="idot" id="id1">1</div>
-          <div class="iline"></div>
-          <div class="idot" id="id2">2</div>
-          <div class="iline"></div>
-          <div class="idot" id="id3">3</div>
+        <!-- Output Log -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <div class="card-title">📋 Pipeline Log</div>
+            <div class="log-container" id="log-container">
+                <div class="log-line log-info">[00:00:00] Pipeline initialized...</div>
+                <div class="log-line log-builder">[00:00:01] 🔨 Builder: Generating secure authentication system...</div>
+                <div class="log-line log-builder">[00:02:45] Builder output: JWT-based authentication with OAuth2 support</div>
+                <div class="log-line log-hacker">[00:02:46] 💀 Red Team: Analyzing generated code...</div>
+                <div class="log-line log-hacker">[00:03:15] Found: 3 HIGH, 2 MEDIUM severity issues</div>
+                <div class="log-line log-auditor">[00:03:16] ⚖️ Auditor: Synthesizing findings...</div>
+                <div class="log-line log-auditor">[00:03:45] Status: REJECTED - Critical issues remain</div>
+                <div class="log-line log-builder">[00:03:46] 🔨 Builder: Remediating identified issues...</div>
+                <div class="log-line log-success">[00:05:30] ✅ Code approved for deployment</div>
+            </div>
         </div>
-      </div>
 
-      <!-- Stats -->
-      <div class="s-section">
-        <span class="s-label">Session Stats</span>
-        <div class="stats-grid">
-          <div class="stat"><div class="stat-val green" id="sRuns">0</div><div class="stat-lbl">Runs</div></div>
-          <div class="stat"><div class="stat-val" style="color:var(--red)" id="sFindings">0</div><div class="stat-lbl">Findings</div></div>
-          <div class="stat"><div class="stat-val" style="color:var(--amber)" id="sTime">—</div><div class="stat-lbl">Last Time</div></div>
-          <div class="stat"><div class="stat-val" id="sVerdict" style="font-size:11px;padding-top:4px">—</div><div class="stat-lbl">Verdict</div></div>
+        <!-- Results Section -->
+        <div class="card results">
+            <div class="card-title">Final Verdict</div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="simulatePipeline()">▶️ Run Pipeline Simulation</button>
+                <button class="btn btn-primary" onclick="downloadReport()" style="background: var(--amber); color: var(--bg-dark);">⬇️ Download Report</button>
+            </div>
+
+            <div class="verdict approved" id="verdict-display">
+                ✅ APPROVED
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <div class="card-title" style="margin-top: 20px;">Generated Code</div>
+                <div class="code-block" id="code-display">
+<span class="code-keyword">import</span> jwt
+<span class="code-keyword">import</span> secrets
+<span class="code-keyword">from</span> datetime <span class="code-keyword">import</span> datetime, timedelta
+<span class="code-keyword">from</span> hashlib <span class="code-keyword">import</span> sha256
+
+<span class="code-keyword">class</span> <span class="code-string">SecureAuthenticator</span>:
+    <span class="code-comment"># Secure JWT-based authentication</span>
+    
+    <span class="code-keyword">def</span> <span class="code-string">__init__</span>(self):
+        self.secret_key = secrets.token_hex(32)
+        self.algorithm = <span class="code-string">"HS256"</span>
+    
+    <span class="code-keyword">def</span> <span class="code-string">generate_token</span>(self, user_id: str) -> str:
+        <span class="code-comment"># Generate secure JWT token</span>
+        payload = {
+            <span class="code-string">"user_id"</span>: user_id,
+            <span class="code-string">"exp"</span>: datetime.utcnow() + timedelta(hours=1)
+        }
+        <span class="code-keyword">return</span> jwt.encode(payload, self.secret_key, 
+                             algorithm=self.algorithm)
+                </div>
+            </div>
+
+            <div class="card-subtitle" style="margin-top: 20px;">
+                <strong>Summary:</strong> Code passed all security reviews. No critical vulnerabilities detected.
+                Safe for deployment with recommended logging enhancements.
+            </div>
         </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- CENTER: EDITOR -->
-  <div class="editor-area">
-    <div class="loading-bar"><div class="loading-fill" id="loadingFill"></div></div>
-    <div class="editor-topbar">
-      <div class="editor-tabs">
-        <div class="etab active" id="etabGenerated">
-          <div class="etab-dot modified" id="edotGenerated"></div>
-          generated_code.py
-        </div>
-      </div>
-      <div class="editor-actions">
-        <button class="ea-btn" onclick="copyCode()" id="copyBtn">📋 Copy</button>
-        <button class="ea-btn primary" onclick="formatCode()">⚡ Format</button>
-      </div>
-    </div>
-    <div id="monacoContainer">
-      <div class="editor-placeholder" id="editorPlaceholder">
-        <div class="ep-icon">🔐</div>
-        <div class="ep-title">Ready to generate secure code</div>
-        <div class="ep-sub">Type your request in the left panel and click RUN PIPELINE. The generated code will appear here in a full VS Code-style editor.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- RIGHT PANEL -->
-  <div class="right-panel">
-    <div class="rp-tabs">
-      <button class="rptab active" onclick="switchRpTab(this,'findings')">Findings</button>
-      <button class="rptab" onclick="switchRpTab(this,'terminal')">Terminal</button>
-      <button class="rptab" onclick="switchRpTab(this,'report')">Report</button>
     </div>
 
-    <!-- Findings tab -->
-    <div class="rp-content" id="rpt-findings">
-      <div class="fheader">
-        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3)">Security Findings</span>
-        <div class="fc" id="fcount">0 findings</div>
-      </div>
-      <div id="flist"><div class="fempty">Run the pipeline to see security findings</div></div>
-    </div>
+    <script>
+        // Mock data for demonstration
+        const mockPipelineData = {
+            status: 'idle',
+            iteration: 1,
+            stages: ['input', 'builder', 'hacker', 'auditor', 'result'],
+            findings: [
+                { severity: 'HIGH', title: 'SQL Injection Risk', cwe: 'CWE-89' },
+                { severity: 'MEDIUM', title: 'Missing Input Validation', cwe: 'CWE-20' },
+                { severity: 'LOW', title: 'Hardcoded Configuration', cwe: 'CWE-798' }
+            ],
+            verdict: 'APPROVED',
+            code: document.getElementById('code-display').textContent
+        };
 
-    <!-- Terminal tab -->
-    <div class="rp-content" id="rpt-terminal" style="display:none;padding:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3)">Live Terminal</span>
-        <button onclick="clearLog()" style="background:none;border:none;color:var(--text3);font-family:var(--mono);font-size:11px;cursor:pointer">CLEAR</button>
-      </div>
-      <div class="terminal" id="termBox">
-        <span class="tl t-info">[system] Secure AI Coding Assistant ready</span><br>
-        <span class="tl t-info">[system] Enter request and click RUN PIPELINE</span><br>
-      </div>
-    </div>
+        function updateStatus(text, type = 'idle') {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = text;
+            dot.className = 'status-dot ' + type;
+        }
 
-    <!-- Report tab -->
-    <div class="rp-content" id="rpt-report" style="display:none">
-      <div id="reportContent">
-        <div class="fempty">Run the pipeline to generate a report</div>
-      </div>
-    </div>
-  </div>
+        function setStageActive(stageName, active = true) {
+            const stage = document.getElementById(`stage-${stageName}`);
+            if (active) {
+                stage.classList.add('active');
+            } else {
+                stage.classList.remove('active');
+            }
+        }
 
-</div>
+        function addLogLine(text, type = 'info') {
+            const container = document.getElementById('log-container');
+            const line = document.createElement('div');
+            const now = new Date().toLocaleTimeString();
+            line.className = `log-line log-${type}`;
+            line.textContent = `[${now}] ${text}`;
+            container.appendChild(line);
+            container.scrollTop = container.scrollHeight;
+        }
 
-<script>
-// ── State ──
-let currentLang = 'python';
-let isRunning = false;
-let findings = [];
-let totalRuns = 0, totalFindings = 0;
-let lastBuilder = '', lastHacker = '', lastVerdict = '';
-let startTime = null;
-let monacoEditor = null;
-let monacoReady = false;
-let history = [];
+        function setAgentStatus(agent, status) {
+            const elem = document.getElementById(`${agent}-status`);
+            elem.className = `agent-status ${status}`;
+            elem.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
 
-// ── Monaco Editor Init ──
-require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
-require(['vs/editor/editor.main'], function() {
-  monacoReady = true;
-  // Define custom dark theme
-  monaco.editor.defineTheme('secureai', {
-    base: 'vs-dark',
-    inherit: true,
-    rules: [
-      { token: 'comment', foreground: '4a5568', fontStyle: 'italic' },
-      { token: 'keyword', foreground: '00e87a' },
-      { token: 'string', foreground: '06b6d4' },
-      { token: 'number', foreground: 'ffb020' },
-      { token: 'function', foreground: '3b82f6' },
-    ],
-    colors: {
-      'editor.background': '#07090f',
-      'editor.foreground': '#e2e8f0',
-      'editor.lineHighlightBackground': '#0e1422',
-      'editor.selectionBackground': '#1a2740',
-      'editorCursor.foreground': '#00e87a',
-      'editorLineNumber.foreground': '#2d3748',
-      'editorLineNumber.activeForeground': '#00e87a',
-      'editor.inactiveSelectionBackground': '#1a2740',
-      'editorGutter.background': '#07090f',
-      'scrollbarSlider.background': '#1a274060',
-      'scrollbarSlider.hoverBackground': '#1a2740',
-    }
-  });
-});
+        function setAgentOutput(agent, output) {
+            const elem = document.getElementById(`${agent}-output`);
+            elem.textContent = output.length > 200 ? output.substring(0, 200) + '...' : output;
+        }
 
-function initEditor(code, lang) {
-  const container = document.getElementById('monacoContainer');
-  document.getElementById('editorPlaceholder')?.remove();
+        function simulatePipeline() {
+            updateStatus('Running...', 'running');
+            setStageActive('input', true);
 
-  if (monacoEditor) {
-    monacoEditor.setValue(code);
-    monaco.editor.setModelLanguage(monacoEditor.getModel(), lang === 'javascript' ? 'javascript' : lang === 'rust' ? 'rust' : lang === 'go' ? 'go' : 'python');
-    return;
-  }
+            const steps = [
+                { delay: 500, fn: () => {
+                    setAgentStatus('builder', 'running');
+                    setStageActive('builder', true);
+                    addLogLine('Builder: Generating secure authentication...', 'builder');
+                }},
+                { delay: 2500, fn: () => {
+                    setAgentOutput('builder', 'JWT auth system with OAuth2 support, rate limiting, and secure session management...');
+                    addLogLine('Builder output ready', 'success');
+                    setAgentStatus('builder', 'complete');
+                    setStageActive('hacker', true);
+                    setAgentStatus('hacker', 'running');
+                    addLogLine('Red Team: Analyzing code...', 'hacker');
+                }},
+                { delay: 3500, fn: () => {
+                    setAgentOutput('hacker', 'Found 2 HIGH severity issues: SQL injection risk, missing CSRF protection...');
+                    addLogLine('Red Team Report: 2 HIGH, 1 MEDIUM severity findings', 'hacker');
+                    setAgentStatus('hacker', 'complete');
+                    setStageActive('auditor', true);
+                    setAgentStatus('auditor', 'running');
+                    addLogLine('Auditor: Synthesizing verdict...', 'auditor');
+                }},
+                { delay: 4500, fn: () => {
+                    setAgentOutput('auditor', 'After static analysis: APPROVED with recommended enhancements...');
+                    document.getElementById('verdict-display').className = 'verdict approved';
+                    document.getElementById('verdict-display').textContent = '✅ APPROVED';
+                    addLogLine('✅ Code Approved for Deployment', 'success');
+                    setAgentStatus('auditor', 'complete');
+                    setStageActive('result', true);
+                    updateStatus('Complete', 'idle');
+                }}
+            ];
 
-  monacoEditor = monaco.editor.create(container, {
-    value: code,
-    language: lang === 'javascript' ? 'javascript' : lang === 'rust' ? 'rust' : lang === 'go' ? 'go' : 'python',
-    theme: 'secureai',
-    fontSize: 13,
-    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-    fontLigatures: true,
-    minimap: { enabled: true, scale: 1 },
-    scrollBeyondLastLine: false,
-    lineNumbers: 'on',
-    renderLineHighlight: 'line',
-    cursorBlinking: 'smooth',
-    cursorSmoothCaretAnimation: 'on',
-    smoothScrolling: true,
-    wordWrap: 'on',
-    padding: { top: 16, bottom: 16 },
-    automaticLayout: true,
-    bracketPairColorization: { enabled: true },
-    guides: { bracketPairs: true },
-    suggest: { enabled: true },
-    quickSuggestions: true,
-    folding: true,
-    renderWhitespace: 'selection',
-  });
+            steps.forEach(step => {
+                setTimeout(step.fn, step.delay);
+            });
+        }
 
-  // Update tab name based on lang
-  updateEditorTab(lang);
-}
+        function downloadReport() {
+            const report = `
+SECURITY AUDIT REPORT
+=====================
+Session ID: demo-2025-001
+Verdict: APPROVED ✅
+Iterations: 1/3
 
-function updateEditorTab(lang) {
-  const exts = {python:'py',javascript:'js',go:'go',rust:'rs'};
-  document.getElementById('etabGenerated').innerHTML = 
-    `<div class="etab-dot modified" id="edotGenerated"></div> generated_code.${exts[lang]||'py'}`;
-}
+FINDINGS SUMMARY:
+- CRITICAL: 0
+- HIGH: 1
+- MEDIUM: 1
+- LOW: 1
 
-// ── Helpers ──
-function setLang(btn, lang) {
-  document.querySelectorAll('.lb').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  currentLang = lang;
-  updateEditorTab(lang);
-  if (monacoEditor) {
-    const langMap = {python:'python',javascript:'javascript',go:'go',rust:'rust'};
-    monaco.editor.setModelLanguage(monacoEditor.getModel(), langMap[lang] || 'python');
-  }
-}
+APPROVED CODE:
+${document.getElementById('code-display').textContent}
 
-function switchTab(btn, tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-}
+Report generated by Secure AI Coding Assistant
+            `;
+            
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(report));
+            element.setAttribute('download', 'security-audit-report.txt');
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
 
-function switchRpTab(btn, tab) {
-  document.querySelectorAll('.rptab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  ['findings','terminal','report'].forEach(t => {
-    const el = document.getElementById('rpt-' + t);
-    if(el) el.style.display = t === tab ? 'block' : 'none';
-  });
-  // Fix terminal height
-  if (tab === 'terminal') {
-    const tb = document.getElementById('termBox');
-    if (tb) { tb.style.height = 'calc(100vh - 200px)'; tb.scrollTop = tb.scrollHeight; }
-  }
-}
-
-function log(msg, type='info') {
-  const box = document.getElementById('termBox');
-  const t = new Date().toLocaleTimeString();
-  box.innerHTML += `<span class="tl t-${type}">[${t}] ${msg}</span><br>`;
-  box.scrollTop = box.scrollHeight;
-}
-
-function clearLog() {
-  document.getElementById('termBox').innerHTML = '<span class="tl t-info">[system] Log cleared</span><br>';
-}
-
-function setLoading(pct, indeterminate=false) {
-  const fill = document.getElementById('loadingFill');
-  if (indeterminate) { fill.className = 'loading-fill indeterminate'; fill.style.width = ''; }
-  else { fill.className = 'loading-fill'; fill.style.width = pct + '%'; }
-}
-
-function pipeNode(i, state) {
-  const el = document.getElementById('pn'+i);
-  el.className = 'mpicon' + (state ? ' '+state : '');
-}
-function pipeArrow(i, on) {
-  document.getElementById('pa'+i).className = 'mparr' + (on ? ' lit' : '');
-}
-function agentSet(i, state, out) {
-  document.getElementById('ar'+i).className = 'agent-row' + (state==='running'?' running':state==='done'?' done':'');
-  const b = document.getElementById('ab'+i);
-  b.className = 'abadge ab-' + (state==='complete'?'complete':state==='running'?'running':state==='error'?'error':'idle');
-  b.textContent = state.toUpperCase();
-  if(out) document.getElementById('ao'+i).textContent = out.length > 40 ? out.substring(0,40)+'...' : out;
-}
-function iterDot(n, state) {
-  const el = document.getElementById('id'+n);
-  el.className = 'idot' + (state==='active'?' active':state==='done'?' done':'');
-}
-function addFinding(sev, cwe, desc) {
-  if (!desc || desc.length < 3) return;
-  findings.push({sev, cwe, desc});
-  const list = document.getElementById('flist');
-  if (list.querySelector('.fempty')) list.innerHTML = '';
-  const d = document.createElement('div');
-  d.className = 'finding';
-  d.innerHTML = `<div class="sb s-${sev}">${sev}</div><div><div class="fdesc">${desc.substring(0,120)}</div><div class="fcwe">${cwe}</div></div>`;
-  list.appendChild(d);
-  const fc = document.getElementById('fcount');
-  fc.textContent = findings.length + (findings.length===1?' finding':' findings');
-  fc.className = 'fc' + (findings.length > 0 ? ' has' : '');
-}
-
-// ── Main Pipeline ──
-async function runPipeline() {
-  if (isRunning) return;
-  const req = document.getElementById('codeRequest').value.trim();
-  if (!req) {
-    document.getElementById('codeRequest').style.borderColor = 'var(--red)';
-    setTimeout(() => document.getElementById('codeRequest').style.borderColor = '', 2000);
-    log('Please enter a request first', 'error');
-    // Switch to terminal to show error
-    switchRpTab(document.querySelectorAll('.rptab')[1], 'terminal');
-    return;
-  }
-
-  isRunning = true;
-  startTime = Date.now();
-  findings = [];
-  document.getElementById('flist').innerHTML = '<div class="fempty">Scanning...</div>';
-  document.getElementById('fcount').textContent = '0 findings';
-  document.getElementById('fcount').className = 'fc';
-
-  const btn = document.getElementById('runBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Analyzing...';
-  btn.classList.add('running');
-
-  // Reset pipeline
-  [0,1,2,3,4].forEach(i => pipeNode(i,''));
-  [0,1,2,3].forEach(i => pipeArrow(i,false));
-  agentSet(0,'idle','Waiting...'); agentSet(1,'idle','Waiting...'); agentSet(2,'idle','Waiting...');
-  [1,2,3].forEach(n => iterDot(n,''));
-  setLoading(0);
-
-  // Switch to terminal tab to show live logs
-  switchRpTab(document.querySelectorAll('.rptab')[1], 'terminal');
-
-  log('Pipeline started → ' + req.substring(0,50), 'success');
-  setLoading(0, true); // indeterminate
-  pipeNode(0,'done'); pipeArrow(0,true); iterDot(1,'active');
-  pipeNode(1,'active');
-  agentSet(0,'running','Generating ' + currentLang + ' code...');
-  log('Builder agent initializing...', 'builder');
-  log('Language: ' + currentLang, 'info');
-
-  let result;
-  try {
-    const res = await fetch('/api/run', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({request: req, language: currentLang})
-    });
-    const ct = res.headers.get('content-type') || '';
-    if (!ct.includes('application/json')) {
-      const txt = await res.text();
-      throw new Error('Server error: ' + txt.substring(0,80));
-    }
-    result = await res.json();
-    if (result.status === 'error') throw new Error(result.message);
-  } catch(err) {
-    log('Error: ' + err.message, 'error');
-    agentSet(0,'error','Error occurred');
-    pipeNode(1,'');
-    setLoading(100);
-    setTimeout(() => setLoading(0), 1000);
-    btn.disabled = false; btn.innerHTML = '▶ RUN PIPELINE'; btn.classList.remove('running');
-    isRunning = false;
-    return;
-  }
-
-  // ── Builder complete ──
-  lastBuilder = result.builder_output || '';
-  lastHacker = result.hacker_report || '';
-  lastVerdict = result.final_verdict || 'ESCALATED';
-
-  const cleanCode = lastBuilder.replace(/```[\w]*\n?/g,'').replace(/```/g,'').trim();
-
-  pipeNode(1,'done'); pipeArrow(1,true);
-  agentSet(0,'complete','Code generated successfully');
-  log('Builder complete — code generated (' + cleanCode.split('\n').length + ' lines)', 'builder');
-
-  // Show code in Monaco editor
-  if (monacoReady) {
-    initEditor(cleanCode, currentLang);
-    document.getElementById('edotGenerated').className = 'etab-dot modified';
-  }
-
-  // ── Hacker phase ──
-  pipeNode(2,'active');
-  agentSet(1,'running','Scanning for vulnerabilities...');
-  log('Hacker agent attacking the code...', 'hacker');
-
-  // Parse findings
-  document.getElementById('flist').innerHTML = '';
-  lastHacker.split('\n').forEach(line => {
-    const m = line.match(/CWE-(\d+)/i);
-    const cwe = m ? 'CWE-'+m[1] : 'CWE-000';
-    if (/CRITICAL/i.test(line)) addFinding('CRITICAL', cwe, line.replace(/.*CRITICAL[^:]*:?\s*/i,'').trim());
-    else if (/\bHIGH\b/i.test(line)) addFinding('HIGH', cwe, line.replace(/.*HIGH[^:]*:?\s*/i,'').trim());
-    else if (/MEDIUM/i.test(line)) addFinding('MEDIUM', cwe, line.replace(/.*MEDIUM[^:]*:?\s*/i,'').trim());
-    else if (/\bLOW\b/i.test(line)) addFinding('LOW', cwe, line.replace(/.*LOW[^:]*:?\s*/i,'').trim());
-  });
-  if (findings.length === 0) {
-    document.getElementById('flist').innerHTML = '<div class="fempty" style="color:var(--green)">✓ No vulnerabilities found</div>';
-  }
-
-  pipeNode(2,'done'); pipeArrow(2,true);
-  agentSet(1,'complete', findings.length + ' issue(s) found');
-  log('Hacker found ' + findings.length + ' vulnerability(s)', findings.length > 0 ? 'warning' : 'success');
-
-  // Switch to findings tab
-  switchRpTab(document.querySelectorAll('.rptab')[0], 'findings');
-
-  // ── Auditor phase ──
-  pipeNode(3,'active');
-  agentSet(2,'running','Reviewing security report...');
-  log('Auditor reviewing all findings...', 'auditor');
-  await new Promise(r => setTimeout(r, 400));
-
-  const approved = lastVerdict === 'APPROVED';
-  pipeNode(3,'done'); pipeArrow(3,true); pipeNode(4,'done');
-  iterDot(1,'done');
-  agentSet(2,'complete','Verdict: ' + lastVerdict);
-  log('Verdict: ' + lastVerdict + (approved ? ' ✓ Safe to deploy' : ' ⚠ Needs fixes'), approved ? 'success' : 'warning');
-
-  // ── Stats ──
-  totalRuns++; totalFindings += findings.length;
-  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  document.getElementById('sRuns').textContent = totalRuns;
-  document.getElementById('sFindings').textContent = totalFindings;
-  document.getElementById('sTime').textContent = elapsed + 's';
-  const sv = document.getElementById('sVerdict');
-  sv.textContent = lastVerdict; sv.style.color = approved ? 'var(--green)' : 'var(--red)';
-
-  // ── Save to history ──
-  history.unshift({
-    request: req, language: currentLang, verdict: lastVerdict,
-    findings: findings.length, time: elapsed, code: cleanCode,
-    hacker: lastHacker, timestamp: new Date().toLocaleString()
-  });
-
-  // ── Build report tab ──
-  buildReport(req, elapsed, approved);
-  setLoading(100);
-  setTimeout(() => setLoading(0), 800);
-  log('Pipeline complete in ' + elapsed + 's', 'success');
-
-  btn.disabled = false; btn.innerHTML = '▶ RUN PIPELINE'; btn.classList.remove('running');
-  isRunning = false;
-}
-
-function buildReport(req, elapsed, approved) {
-  const html = `
-    <div class="report-section">
-      <div class="report-title">Verdict</div>
-      <div class="verdict-chip ${approved?'approved':'escalated'}">${approved?'✅':'⚠️'} ${lastVerdict}</div>
-    </div>
-    <div class="report-section">
-      <div class="report-title">Request</div>
-      <div class="report-value">${req}</div>
-    </div>
-    <div class="report-section">
-      <div class="report-title">Summary</div>
-      <div class="report-value">
-        Language: ${currentLang}<br>
-        Findings: ${findings.length}<br>
-        Run time: ${elapsed}s<br>
-        Model: ${document.getElementById('apiLabel').textContent}<br>
-        Date: ${new Date().toLocaleString()}
-      </div>
-    </div>
-    <div class="report-section">
-      <div class="report-title">Findings Breakdown</div>
-      <div class="report-value" style="font-family:var(--mono);font-size:12px">
-        CRITICAL: ${findings.filter(f=>f.sev==='CRITICAL').length}<br>
-        HIGH: ${findings.filter(f=>f.sev==='HIGH').length}<br>
-        MEDIUM: ${findings.filter(f=>f.sev==='MEDIUM').length}<br>
-        LOW: ${findings.filter(f=>f.sev==='LOW').length}
-      </div>
-    </div>
-    <button class="dl-btn" onclick="downloadReport()">⬇ Download Full Report (.txt)</button>
-    <button class="dl-btn" style="margin-top:6px;background:transparent;color:var(--cyan);border-color:rgba(6,182,212,0.3)" onclick="copyCode()">📋 Copy Generated Code</button>
-  `;
-  document.getElementById('reportContent').innerHTML = html;
-}
-
-function resetAll() {
-  if (isRunning) return;
-  document.getElementById('codeRequest').value = '';
-  document.getElementById('flist').innerHTML = '<div class="fempty">Run the pipeline to see security findings</div>';
-  document.getElementById('fcount').textContent = '0 findings';
-  document.getElementById('fcount').className = 'fc';
-  document.getElementById('reportContent').innerHTML = '<div class="fempty">Run the pipeline to generate a report</div>';
-  clearLog();
-  [0,1,2,3,4].forEach(i => pipeNode(i,''));
-  [0,1,2,3].forEach(i => pipeArrow(i,false));
-  agentSet(0,'idle','Waiting...'); agentSet(1,'idle','Waiting...'); agentSet(2,'idle','Waiting...');
-  [1,2,3].forEach(n => iterDot(n,''));
-  findings = []; lastBuilder = ''; lastHacker = ''; lastVerdict = '';
-  setLoading(0);
-  if (monacoEditor) monacoEditor.setValue('// Your secure code will appear here after running the pipeline\n');
-}
-
-function copyCode() {
-  const code = monacoEditor ? monacoEditor.getValue() : lastBuilder;
-  if (!code || code.includes('Your secure code will appear')) { log('No code to copy yet', 'warning'); return; }
-  navigator.clipboard.writeText(code).then(() => {
-    const b = document.getElementById('copyBtn');
-    b.textContent = '✓ Copied!'; b.style.color = 'var(--green)';
-    setTimeout(() => { b.textContent = '📋 Copy'; b.style.color = ''; }, 2000);
-    log('Code copied to clipboard', 'success');
-  });
-}
-
-function formatCode() {
-  if (monacoEditor) {
-    monacoEditor.getAction('editor.action.formatDocument')?.run();
-    log('Code formatted', 'success');
-  }
-}
-
-function downloadReport() {
-  if (!lastBuilder) { log('Run the pipeline first', 'warning'); return; }
-  const code = monacoEditor ? monacoEditor.getValue() : lastBuilder;
-  const report = `SECURE AI CODING ASSISTANT — AUDIT REPORT
-==========================================
-Date: ${new Date().toLocaleString()}
-Language: ${currentLang}
-Verdict: ${lastVerdict}
-Findings: ${findings.length}
-Model: ${document.getElementById('apiLabel').textContent}
-
-FINDINGS BREAKDOWN
-------------------
-CRITICAL: ${findings.filter(f=>f.sev==='CRITICAL').length}
-HIGH: ${findings.filter(f=>f.sev==='HIGH').length}
-MEDIUM: ${findings.filter(f=>f.sev==='MEDIUM').length}
-LOW: ${findings.filter(f=>f.sev==='LOW').length}
-
-SECURITY FINDINGS
------------------
-${findings.map(f=>`[${f.sev}] ${f.cwe}: ${f.desc}`).join('\n') || 'None found'}
-
-HACKER ANALYSIS
----------------
-${lastHacker}
-
-GENERATED CODE
---------------
-${code}
-
-Generated by Secure AI Coding Assistant PRO
-Powered by Groq (llama-3.3-70b) / Anthropic (claude-3-5-sonnet)
-`;
-  const a = document.createElement('a');
-  a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(report);
-  a.download = 'security-audit-' + Date.now() + '.txt';
-  a.click();
-  log('Report downloaded', 'success');
-}
-
-// ── Health check ──
-fetch('/api/health').then(r => r.json()).then(d => {
-  document.getElementById('apiLabel').textContent = d.active_model || 'groq/llama-3.3-70b';
-  log('API connected: ' + (d.active_model || 'groq/llama-3.3-70b'), 'success');
-  log('Groq: ' + (d.groq ? '✓' : '✗') + '  Anthropic: ' + (d.anthropic ? '✓' : '✗'), 'info');
-}).catch(() => {
-  const p = document.getElementById('apiPill'); p.className = 'api-pill offline';
-  document.getElementById('apiDot').className = 'apidot offline';
-  document.getElementById('apiLabel').textContent = 'API Offline';
-  log('API connection failed — check Render deployment', 'error');
-});
-</script>
+        // Auto-scroll log container
+        window.addEventListener('load', () => {
+            const container = document.getElementById('log-container');
+            container.scrollTop = container.scrollHeight;
+        });
+    </script>
 </body>
 </html>
-HTMLEOF
-echo "Done: $(wc -l < /mnt/user-data/outputs/dashboard.html) lines"
-Output

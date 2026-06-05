@@ -4,7 +4,7 @@
     runtime: python
     pythonVersion: "3.11.0"
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -12,3 +12,9 @@
         sync: false
       - key: PORT
         value: "5000"
+      - key: RATE_LIMIT
+        value: "10"
+      - key: RATE_WINDOW
+        value: "60"
+      - key: ALLOWED_ORIGINS
+        value: "*"
