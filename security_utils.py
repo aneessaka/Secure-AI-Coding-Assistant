@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 # --- Malicious Request Filter ---
 
 MALICIOUS_REQUEST_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"\b(wifi|wi-fi|wpa2?|wep)\b.{0,40}\b(hack|crack|break|bypass|steal)\b", re.I),
+    (re.compile(r"\b(wifi|wi-fi|wpa2?|wep)\b.{0,40}\b(hack(ing)?|crack(ing)?|break|bypass|steal)\b", re.I),
      "offensive_tooling"),
-    (re.compile(r"\b(hack|crack|break)\b.{0,40}\b(wifi|wi-fi|wpa2?|wep)\b", re.I),
+    (re.compile(r"\b(hack(ing)?|crack(ing)?|break)\b.{0,40}\b(wifi|wi-fi|wpa2?|wep)\b", re.I),
      "offensive_tooling"),
     (re.compile(r"\b(build|create|write|make|develop)\b.{0,30}\b(keylogger|ransomware|rootkit|botnet|spyware|malware|virus|trojan|worm)\b", re.I),
      "offensive_tooling"),

@@ -16,6 +16,10 @@ class TestContentFilter:
         assert result.blocked
         assert result.category == "offensive_tooling"
 
+    def test_blocks_short_wifi_hacking_request(self):
+        result = check_malicious_request("build a wifi hacking tool")
+        assert result.blocked
+
     def test_blocks_keylogger_request(self):
         result = check_malicious_request("create a keylogger for Windows")
         assert result.blocked
