@@ -8,6 +8,7 @@ from security_utils import (
     check_malicious_request,
     generate_secure_session_id,
 )
+from github_bot import process_pull_request, verify_webhook_signature
 
 load_dotenv()
 app = Flask(__name__)
@@ -39,6 +40,7 @@ def add_cors(r):
 
 @app.route("/api/run", methods=["OPTIONS"])
 @app.route("/api/scan", methods=["OPTIONS"])
+@app.route("/api/github/webhook", methods=["OPTIONS"])
 def options():
     return "", 204
 
@@ -167,8 +169,9 @@ def health():
         "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
         "groq": bool(os.getenv("GROQ_API_KEY")),
         "active_model": "groq/llama-3.3-70b" if os.getenv("GROQ_API_KEY") else "anthropic/claude-3-5-sonnet",
-        "version": "2.1.0",
-        "endpoints": ["/api/run", "/api/scan", "/api/health"],
+        "version": "2.2.0",
+        "github_bot": bool(os.getenv("GITHUB_TOKEN")),
+        "endpoints": ["/api/run", "/api/scan", "/api/github/webhook", "/api/health"],
     })
 
 
@@ -247,6 +250,54 @@ def scan():
     except Exception as e:
         print(f"[error] {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def _run_pr_scan_async(payload: dict) -> None:
+    def _worker():
+        try:
+            summary = process_pull_request(payload, run_scan)
+            print(f"[github-bot] done: {summary}")
+        except Exception as exc:
+            print(f"[github-bot] failed: {exc}")
+
+    thread = threading.Thread(target=_worker, daemon=True)
+    thread.start()
+
+
+@app.route("/api/github/webhook", methods=["POST"])
+def github_webhook():
+    if not os.getenv("GITHUB_TOKEN"):
+        return jsonify({"status": "error", "message": "GitHub bot not configured"}), 503
+
+    secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+    signature = request.headers.get("X-Hub-Signature-256")
+    payload_bytes = request.get_data()
+
+    if secret and not verify_webhook_signature(payload_bytes, signature, secret):
+        return jsonify({"status": "error", "message": "Invalid webhook signature"}), 401
+
+    event = request.headers.get("X-GitHub-Event", "")
+    if event == "ping":
+        return jsonify({"status": "ok", "message": "pong"}), 200
+
+    if event != "pull_request":
+        return jsonify({"status": "ignored", "event": event}), 200
+
+    payload = request.get_json(silent=True)
+    if not payload:
+        return jsonify({"status": "error", "message": "Invalid JSON payload"}), 400
+
+    action = (payload.get("action") or "")
+    if action not in ("opened", "synchronize", "reopened"):
+        return jsonify({"status": "ignored", "action": action}), 200
+
+    _run_pr_scan_async(payload)
+    return jsonify({
+        "status": "accepted",
+        "message": "PR scan started",
+        "pr": (payload.get("pull_request") or {}).get("number"),
+    }), 202
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))

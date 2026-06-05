@@ -18,3 +18,9 @@
         value: "60"
       - key: ALLOWED_ORIGINS
         value: "*"
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: GITHUB_MAX_FILES_PER_PR
+        value: "5"
