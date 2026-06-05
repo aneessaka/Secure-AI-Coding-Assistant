@@ -4,14 +4,16 @@ github_bot/bot.py
 GitHub Pull Request security bot.
 
 On pull_request (opened / synchronize / reopened):
-  1. Fetch changed files from the PR
-  2. Run the scan pipeline on each supported source file
-  3. Post or update a summary comment on the PR
+  1. Optionally run /scan <url> web scan from PR body
+  2. Fetch changed files from the PR
+  3. Run the scan pipeline on each supported source file
+  4. Post or update a summary comment on the PR
 """
 
 from __future__ import annotations
 
 import base64
+import threading
 import hashlib
 import hmac
 import json
@@ -22,6 +24,9 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
+
+from github_bot.scanner import WebScanner
+from github_bot.url_validator import URLValidator
 
 BOT_MARKER = "<!-- secure-ai-bot -->"
 BOT_HEADER = "## Secure AI Security Scan"
@@ -55,6 +60,158 @@ class FileScanResult:
     verdict: str
     findings: list[Finding]
     error: Optional[str] = None
+
+
+def extract_scan_command(body: str) -> Optional[str]:
+    """
+    Look for a line starting with '/scan ' in the PR body.
+    Returns a validated, sanitized URL if found, else None.
+    """
+    if not body:
+        return None
+    for line in body.splitlines():
+        line = line.strip()
+        if not line.lower().startswith("/scan "):
+            continue
+        url = line[6:].strip()
+        if not url.startswith(("http://", "https://")):
+            continue
+        safe_url = URLValidator.sanitize_url(url)
+        if URLValidator.is_safe_url(safe_url):
+            return safe_url
+    return None
+
+
+def generate_scan_report(result: dict, target_url: str) -> str:
+    """Generate markdown report from web scan results."""
+    if result.get("total_findings", 0) == 0:
+        return (
+            f"## Security Scan Report for `{target_url}`\n\n"
+            "**No vulnerabilities detected**\n\n"
+            "_Simulated scan — real scanner coming soon._"
+        )
+
+    lines = [
+        f"## Security Scan Report for `{target_url}`",
+        f"**Scan completed:** {result.get('scan_time', 'unknown')}",
+        f"**Total findings:** {result['total_findings']}",
+        "",
+        "### Vulnerability Details",
+        "| Severity | Finding | Solution |",
+        "|----------|---------|----------|",
+    ]
+    for finding in result.get("findings", []):
+        solution = finding.get("solution", "")[:60]
+        lines.append(
+            f"| **{finding.get('severity', 'UNKNOWN')}** "
+            f"| {finding.get('name', 'Unknown')} "
+            f"| {solution} |"
+        )
+    lines.append("\n---\n_Scan performed by Secure AI Security Scanner (simulated)_")
+    return "\n".join(lines)
+
+
+def handle_scan_command(
+    pull_request: dict,
+    target_url: str,
+    owner: str,
+    repo_name: str,
+    token: str,
+) -> dict:
+    """
+    Post a comment that scanning started, run the web scanner, then post results.
+    Safe to call from a background thread.
+    """
+    pr_number = pull_request.get("number")
+    if not pr_number:
+        return {"status": "error", "reason": "missing pr number"}
+
+    print(f"[github-bot] /scan command for PR #{pr_number}: {target_url}")
+
+    _post_pr_comment(
+        owner,
+        repo_name,
+        pr_number,
+        token,
+        f"**Web Security Scan Initiated**\n\nScanning `{target_url}` for vulnerabilities...",
+    )
+
+    scanner = WebScanner()
+    result = scanner.scan_url_sync(target_url)
+
+    if result.get("error"):
+        report = f"**Scan failed**: {result.get('details', 'Unknown error')}"
+        status = "error"
+    else:
+        report = generate_scan_report(result, target_url)
+        status = "success"
+
+    _post_pr_comment(owner, repo_name, pr_number, token, report)
+
+    return {
+        "status": status,
+        "pr": pr_number,
+        "url": target_url,
+        "findings": result.get("total_findings", 0),
+    }
+
+
+def _repo_context(payload: dict) -> tuple[dict, str, str, str]:
+    """Extract pull_request, owner, repo_name, and token from a webhook payload."""
+    pr = payload.get("pull_request") or {}
+    repo = payload.get("repository") or {}
+    full_name = repo.get("full_name", "")
+    if "/" not in full_name:
+        raise ValueError("missing repository full_name")
+    owner, repo_name = full_name.split("/", 1)
+    token = os.getenv("GITHUB_TOKEN", "")
+    if not token:
+        raise EnvironmentError("GITHUB_TOKEN is not set")
+    return pr, owner, repo_name, token
+
+
+def start_pull_request_tasks(payload: dict, run_scan: Callable[[str, str], dict]) -> dict:
+    """
+    Schedule PR processing in background threads.
+
+    - If PR body contains `/scan <url>`, runs handle_scan_command
+    - Always runs process_pull_request for changed source files
+
+    Returns an immediate summary for the webhook HTTP response.
+    """
+    pr_body = (payload.get("pull_request") or {}).get("body") or ""
+    target_url = extract_scan_command(pr_body)
+    pr_number = (payload.get("pull_request") or {}).get("number")
+
+    if target_url:
+
+        def _web_scan_worker():
+            try:
+                pr, owner, repo_name, token = _repo_context(payload)
+                summary = handle_scan_command(pr, target_url, owner, repo_name, token)
+                print(f"[github-bot] web scan done: {summary}")
+            except Exception as exc:
+                print(f"[github-bot] web scan failed: {exc}")
+
+        threading.Thread(target=_web_scan_worker, daemon=True).start()
+
+    def _file_scan_worker():
+        try:
+            summary = process_pull_request(payload, run_scan)
+            print(f"[github-bot] file scan done: {summary}")
+        except Exception as exc:
+            print(f"[github-bot] file scan failed: {exc}")
+
+    threading.Thread(target=_file_scan_worker, daemon=True).start()
+
+    response = {
+        "pr": pr_number,
+        "file_scan": "started",
+    }
+    if target_url:
+        response["web_scan_url"] = target_url
+        response["web_scan"] = "started"
+    return response
 
 
 def verify_webhook_signature(payload: bytes, signature_header: Optional[str], secret: str) -> bool:
@@ -168,6 +325,15 @@ def _list_issue_comments(owner: str, repo: str, pr_number: int, token: str) -> l
     return _github_request("GET", f"/repos/{owner}/{repo}/issues/{pr_number}/comments", token)
 
 
+def _post_pr_comment(owner: str, repo: str, pr_number: int, token: str, body: str) -> None:
+    _github_request(
+        "POST",
+        f"/repos/{owner}/{repo}/issues/{pr_number}/comments",
+        token,
+        {"body": body},
+    )
+
+
 def _upsert_pr_comment(owner: str, repo: str, pr_number: int, token: str, body: str) -> None:
     comments = _list_issue_comments(owner, repo, pr_number, token)
     existing_id = None
@@ -185,12 +351,7 @@ def _upsert_pr_comment(owner: str, repo: str, pr_number: int, token: str, body: 
             payload,
         )
     else:
-        _github_request(
-            "POST",
-            f"/repos/{owner}/{repo}/issues/{pr_number}/comments",
-            token,
-            payload,
-        )
+        _post_pr_comment(owner, repo, pr_number, token, body)
 
 
 def _format_comment(results: list[FileScanResult], pr_number: int) -> str:

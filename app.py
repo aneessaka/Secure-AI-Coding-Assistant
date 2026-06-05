@@ -8,7 +8,7 @@ from security_utils import (
     check_malicious_request,
     generate_secure_session_id,
 )
-from github_bot import process_pull_request, verify_webhook_signature
+from github_bot import start_pull_request_tasks, verify_webhook_signature
 
 load_dotenv()
 app = Flask(__name__)
@@ -252,18 +252,6 @@ def scan():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-def _run_pr_scan_async(payload: dict) -> None:
-    def _worker():
-        try:
-            summary = process_pull_request(payload, run_scan)
-            print(f"[github-bot] done: {summary}")
-        except Exception as exc:
-            print(f"[github-bot] failed: {exc}")
-
-    thread = threading.Thread(target=_worker, daemon=True)
-    thread.start()
-
-
 @app.route("/api/github/webhook", methods=["GET"])
 def github_webhook_status():
     """Browser / health-check friendly — GitHub delivers events via POST."""
@@ -303,11 +291,15 @@ def github_webhook():
     if action not in ("opened", "synchronize", "reopened"):
         return jsonify({"status": "ignored", "action": action}), 200
 
-    _run_pr_scan_async(payload)
+    tasks = start_pull_request_tasks(payload, run_scan)
+    message = "PR scan started"
+    if tasks.get("web_scan_url"):
+        message = "PR scan and web scan started"
+
     return jsonify({
         "status": "accepted",
-        "message": "PR scan started",
-        "pr": (payload.get("pull_request") or {}).get("number"),
+        "message": message,
+        **tasks,
     }), 202
 
 

@@ -12,12 +12,123 @@ from github_bot.bot import (
     BOT_MARKER,
     Finding,
     FileScanResult,
+    extract_scan_command,
+    handle_scan_command,
     language_for_path,
     parse_findings,
     process_pull_request,
+    start_pull_request_tasks,
     verify_webhook_signature,
     _format_comment,
 )
+
+
+class TestExtractScanCommand:
+    def test_finds_scan_url(self):
+        body = "Please review this PR\n/scan https://example.com\nThanks"
+        assert extract_scan_command(body) == "https://example.com"
+
+    def test_case_insensitive(self):
+        assert extract_scan_command("/SCAN https://example.com/path") == "https://example.com/path"
+
+    def test_returns_none_without_command(self):
+        assert extract_scan_command("normal PR description") is None
+        assert extract_scan_command("") is None
+
+    def test_ignores_non_http_urls(self):
+        assert extract_scan_command("/scan ftp://example.com") is None
+
+    def test_rejects_localhost_urls(self):
+        assert extract_scan_command("/scan http://localhost/admin") is None
+        assert extract_scan_command("/scan http://127.0.0.1/") is None
+
+
+class TestHandleScanCommand:
+    def test_posts_scan_comments(self, monkeypatch):
+        os.environ["GITHUB_TOKEN"] = "fake-token"
+        posts: list[str] = []
+
+        monkeypatch.setattr(
+            "github_bot.bot._post_pr_comment",
+            lambda *a: posts.append(a[4]),
+        )
+        monkeypatch.setattr(
+            "github_bot.bot.WebScanner.scan_url_sync",
+            lambda self, url, depth="standard": {
+                "total_findings": 1,
+                "scan_time": "now",
+                "findings": [{"severity": "MEDIUM", "name": "Test", "solution": "Fix it"}],
+            },
+        )
+
+        result = handle_scan_command(
+            {"number": 3},
+            "https://example.com",
+            "owner",
+            "repo",
+            "fake-token",
+        )
+
+        assert result["status"] == "success"
+        assert result["url"] == "https://example.com"
+        assert len(posts) == 2
+        assert "Scan Initiated" in posts[0]
+        assert "Security Scan Report" in posts[1]
+
+    def test_posts_failure_for_blocked_url(self, monkeypatch):
+        posts: list[str] = []
+        monkeypatch.setattr(
+            "github_bot.bot._post_pr_comment",
+            lambda *a: posts.append(a[4]),
+        )
+        monkeypatch.setattr(
+            "github_bot.bot.WebScanner.scan_url_sync",
+            lambda self, url, depth="standard": {
+                "error": "invalid_url",
+                "details": "URL is not allowed",
+            },
+        )
+
+        result = handle_scan_command(
+            {"number": 1}, "http://evil.local", "o", "r", "token"
+        )
+        assert result["status"] == "error"
+        assert "Scan failed" in posts[-1]
+
+
+class TestStartPullRequestTasks:
+    def test_starts_web_and_file_scan(self, monkeypatch):
+        os.environ["GITHUB_TOKEN"] = "fake-token"
+        started = {"web": 0, "file": 0}
+
+        monkeypatch.setattr(
+            "github_bot.bot.handle_scan_command",
+            lambda *a: started.__setitem__("web", started["web"] + 1) or {"status": "success"},
+        )
+        monkeypatch.setattr(
+            "github_bot.bot.process_pull_request",
+            lambda *a: started.__setitem__("file", started["file"] + 1) or {"status": "success"},
+        )
+
+        payload = {
+            "action": "opened",
+            "pull_request": {
+                "number": 5,
+                "body": "/scan https://example.com",
+                "head": {"sha": "abc"},
+            },
+            "repository": {"full_name": "owner/repo"},
+        }
+        result = start_pull_request_tasks(payload, lambda c, l: {})
+
+        assert result["web_scan_url"] == "https://example.com"
+        assert result["web_scan"] == "started"
+        assert result["file_scan"] == "started"
+
+        import time
+        time.sleep(0.2)
+        assert started["web"] == 1
+        assert started["file"] == 1
 
 
 class TestLanguageDetection:
