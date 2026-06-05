@@ -1,11 +1,20 @@
 ﻿from flask import Flask, request, jsonify, send_file
 from dotenv import load_dotenv
 from collections import defaultdict
-from datetime import datetime
 import threading, time, os
+
+from security_utils import (
+    BLOCKED_REQUEST_MESSAGE,
+    check_malicious_request,
+    generate_secure_session_id,
+)
 
 load_dotenv()
 app = Flask(__name__)
+
+SUPPORTED_LANGUAGES = {"python", "javascript", "go", "rust"}
+MAX_RUN_REQUEST_LENGTH = 2000
+MAX_SCAN_CODE_LENGTH = 50000
 
 _rate_store = defaultdict(list)
 RATE_LIMIT = int(os.getenv("RATE_LIMIT", "10"))
@@ -29,6 +38,7 @@ def add_cors(r):
     return r
 
 @app.route("/api/run", methods=["OPTIONS"])
+@app.route("/api/scan", methods=["OPTIONS"])
 def options():
     return "", 204
 
@@ -65,6 +75,59 @@ def call_llm(ct, client, prompt, max_tokens=1000):
         messages=[{"role": "user", "content": prompt}])
     return r.content[0].text
 
+
+def parse_verdict(auditor_response: str) -> str:
+    for line in auditor_response.splitlines():
+        if line.strip().upper().startswith("VERDICT:"):
+            return "APPROVED" if "APPROVED" in line.upper() else "ESCALATED"
+    return "ESCALATED"
+
+
+def run_scan(code: str, language: str = "python"):
+    """Scan existing source code — Hacker + static analysis + Auditor (no Builder)."""
+    from Prompts.system_prompts import HACKER_SYSTEM_PROMPT, AUDITOR_SYSTEM_PROMPT
+    from tools.static_analysis import run_all_tools
+
+    ct, client = get_client()
+    print(f"[scan] using {ct}")
+
+    static_analysis = ""
+    if language == "python":
+        static_analysis = run_all_tools(code=code, language=language, mock=True)
+
+    hacker_report = call_llm(
+        ct,
+        client,
+        f"{HACKER_SYSTEM_PROMPT}\n\n"
+        f"Find vulnerabilities in this {language} code (max 8 findings):\n\n"
+        f"```\n{code}\n```\n\n"
+        f"Format each as: [CRITICAL/HIGH/MEDIUM/LOW] CWE-XXX: description",
+        max_tokens=1000,
+    )
+
+    auditor_prompt = (
+        f"{AUDITOR_SYSTEM_PROMPT}\n\n"
+        f"## CODE UNDER REVIEW:\n```\n{code}\n```\n\n"
+        f"## RED TEAM FINDINGS:\n{hacker_report}\n"
+    )
+    if static_analysis:
+        auditor_prompt += f"\n## STATIC ANALYSIS:\n{static_analysis}\n"
+    auditor_prompt += "\nStart your response with: Verdict: APPROVED or Verdict: ESCALATED"
+
+    auditor_response = call_llm(ct, client, auditor_prompt, max_tokens=800)
+
+    return {
+        "final_verdict": parse_verdict(auditor_response),
+        "active_llm": ct,
+        "code": code,
+        "hacker_report": hacker_report,
+        "auditor_verdict": auditor_response,
+        "static_analysis": static_analysis or None,
+        "session_id": generate_secure_session_id(),
+        "pipeline": "scan",
+    }
+
+
 def run_pipeline(user_request, language="python"):
     from Prompts.system_prompts import BUILDER_SYSTEM_PROMPT, HACKER_SYSTEM_PROMPT, AUDITOR_SYSTEM_PROMPT
     ct, client = get_client()
@@ -82,21 +145,15 @@ def run_pipeline(user_request, language="python"):
         f"{AUDITOR_SYSTEM_PROMPT}\n\nFindings:\n{hacker_report}\n\nStart your response with: Verdict: APPROVED or Verdict: ESCALATED",
         max_tokens=600)
 
-    verdict = "ESCALATED"
-    for line in auditor_response.splitlines():
-        if line.strip().upper().startswith("VERDICT:"):
-            verdict = "APPROVED" if "APPROVED" in line.upper() else "ESCALATED"
-            break
-
     return {
-        "final_verdict": verdict,
+        "final_verdict": parse_verdict(auditor_response),
         "iterations": 1,
         "active_llm": ct,
         "builder_output": builder_output,
         "hacker_report": hacker_report,
         "auditor_verdict": auditor_response,
-        "session_id": datetime.now().strftime("%Y%m%d_%H%M%S"),
-        "pipeline": "direct"
+        "session_id": generate_secure_session_id(),
+        "pipeline": "direct",
     }
 
 @app.route("/")
@@ -110,25 +167,82 @@ def health():
         "anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
         "groq": bool(os.getenv("GROQ_API_KEY")),
         "active_model": "groq/llama-3.3-70b" if os.getenv("GROQ_API_KEY") else "anthropic/claude-3-5-sonnet",
-        "version": "2.0.0"
+        "version": "2.1.0",
+        "endpoints": ["/api/run", "/api/scan", "/api/health"],
     })
 
-@app.route("/api/run", methods=["POST"])
-def run():
+
+def _rate_limited():
     ip = request.remote_addr or "unknown"
     if not check_rate(ip):
         return jsonify({"status": "error", "message": "Rate limit exceeded"}), 429
+    return None
+
+
+def _validate_language(lang: str):
+    if lang not in SUPPORTED_LANGUAGES:
+        return jsonify({"status": "error", "message": "Invalid language"}), 400
+    return None
+
+
+@app.route("/api/run", methods=["POST"])
+def run():
+    blocked = _rate_limited()
+    if blocked:
+        return blocked
+
     data = request.json
     if not data or not data.get("request"):
         return jsonify({"status": "error", "message": "request field required"}), 400
+
     req = data["request"].strip()
-    if len(req) > 2000:
+    if len(req) > MAX_RUN_REQUEST_LENGTH:
         return jsonify({"status": "error", "message": "Request too long"}), 400
+
+    filter_result = check_malicious_request(req)
+    if filter_result.blocked:
+        return jsonify({
+            "status": "blocked",
+            "message": BLOCKED_REQUEST_MESSAGE,
+            "category": filter_result.category,
+        }), 403
+
     lang = data.get("language", "python").lower()
-    if lang not in {"python", "javascript", "go", "rust"}:
-        return jsonify({"status": "error", "message": "Invalid language"}), 400
+    lang_error = _validate_language(lang)
+    if lang_error:
+        return lang_error
+
     try:
         result = run_pipeline(req, lang)
+        return jsonify({"status": "success", **result})
+    except Exception as e:
+        print(f"[error] {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/scan", methods=["POST"])
+def scan():
+    blocked = _rate_limited()
+    if blocked:
+        return blocked
+
+    data = request.json
+    if not data or not data.get("code"):
+        return jsonify({"status": "error", "message": "code field required"}), 400
+
+    code = data["code"].strip()
+    if not code:
+        return jsonify({"status": "error", "message": "code field required"}), 400
+    if len(code) > MAX_SCAN_CODE_LENGTH:
+        return jsonify({"status": "error", "message": "Code too long"}), 400
+
+    lang = data.get("language", "python").lower()
+    lang_error = _validate_language(lang)
+    if lang_error:
+        return lang_error
+
+    try:
+        result = run_scan(code, lang)
         return jsonify({"status": "success", **result})
     except Exception as e:
         print(f"[error] {e}")

@@ -9,9 +9,69 @@ import re
 import secrets
 import logging
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+# --- Malicious Request Filter ---
+
+MALICIOUS_REQUEST_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\b(wifi|wi-fi|wpa2?|wep)\b.{0,40}\b(hack|crack|break|bypass|steal)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(hack|crack|break)\b.{0,40}\b(wifi|wi-fi|wpa2?|wep)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(build|create|write|make|develop)\b.{0,30}\b(keylogger|ransomware|rootkit|botnet|spyware|malware|virus|trojan|worm)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(keylogger|ransomware|rootkit|botnet|spyware)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(credential\s*stuffing|password\s*spray(ing)?|brute\s*force\s*tool)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(ddos|dos)\b.{0,20}\b(tool|script|attack|bot)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(steal|exfiltrate|harvest)\b.{0,30}\b(password|credential|cookie|session|token)s?\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(phishing)\b.{0,30}\b(page|site|email|kit|template)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(exploit|payload)\b.{0,30}\b(generator|builder|framework)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(bypass|disable|evade)\b.{0,30}\b(antivirus|firewall|detection|security)\b", re.I),
+     "offensive_tooling"),
+    (re.compile(r"\b(unauthorized|illegal)\b.{0,30}\b(access|intrusion|entry)\b", re.I),
+     "offensive_tooling"),
+]
+
+BLOCKED_REQUEST_MESSAGE = (
+    "This platform generates and audits defensive security code. "
+    "Requests for offensive tooling, unauthorized access, or attack tools are not permitted. "
+    "You can scan existing code for vulnerabilities using /api/scan."
+)
+
+
+@dataclass(frozen=True)
+class ContentFilterResult:
+    blocked: bool
+    category: Optional[str] = None
+    matched_pattern: Optional[str] = None
+
+
+def check_malicious_request(text: str) -> ContentFilterResult:
+    """
+    Block natural-language requests that ask for offensive or malicious tooling.
+
+    Applied to code-generation requests (/api/run), not to source code submitted
+    for security review (/api/scan).
+    """
+    normalized = " ".join(text.split())
+    for pattern, category in MALICIOUS_REQUEST_PATTERNS:
+        if pattern.search(normalized):
+            return ContentFilterResult(
+                blocked=True,
+                category=category,
+                matched_pattern=pattern.pattern,
+            )
+    return ContentFilterResult(blocked=False)
 
 
 # --- Session ID Generation ---
